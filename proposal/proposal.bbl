@@ -1,0 +1,19 @@
+\begin{thebibliography}{1}
+
+\bibitem{hand}
+Isasonas Oikonomidis, Nikolaos Kyriazis, and Antonis~A. Argyros.
+\newblock Markerless and efficient 26-dof hand pose recovery.
+\newblock {\em LNCS}, (6494):744--757, 2010.
+
+\bibitem{object}
+Isasonas Oikonomidis, Nikolaos Kyriazis, and Antonis~A. Argyros.
+\newblock Full dof tracking of a hand interacting with an object by modeling
+  occlusions and physical constraints.
+\newblock {\em Proc of ICCV 2011}, 2011.
+
+\bibitem{otherhand}
+Isasonas Oikonomidis, Nikolaos Kyriazis, and Antonis~A. Argyros.
+\newblock Tracking the articulated motion of two strongly interacting hands.
+\newblock {\em Proc of CVPR 2012}, 2012.
+
+\end{thebibliography}

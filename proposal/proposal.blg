@@ -1,0 +1,47 @@
+This is BibTeX, Version 0.99c (Web2C 7.5.6)
+The top-level auxiliary file: proposal.aux
+The style file: plain.bst
+Database file #1: proposal.bib
+Warning--there's a number but no volume in hand
+You've used 3 entries,
+            2118 wiz_defined-function locations,
+            511 strings with 4352 characters,
+and the built_in function-call counts, 928 in all, are:
+= -- 87
+> -- 54
+< -- 0
++ -- 21
+- -- 18
+* -- 68
+:= -- 172
+add.period$ -- 9
+call.type$ -- 3
+change.case$ -- 18
+chr.to.int$ -- 0
+cite$ -- 4
+duplicate$ -- 31
+empty$ -- 62
+format.name$ -- 18
+if$ -- 180
+int.to.chr$ -- 0
+int.to.str$ -- 3
+missing$ -- 3
+newline$ -- 18
+num.names$ -- 6
+pop$ -- 17
+preamble$ -- 1
+purify$ -- 15
+quote$ -- 0
+skip$ -- 19
+stack$ -- 0
+substring$ -- 40
+swap$ -- 3
+text.length$ -- 0
+text.prefix$ -- 0
+top$ -- 0
+type$ -- 12
+warning$ -- 1
+while$ -- 8
+width$ -- 4
+write$ -- 33
+(There was 1 warning)

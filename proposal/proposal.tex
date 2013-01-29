@@ -1,0 +1,28 @@
+%        File: proposal.tex
+%     Created: Thu Dec 06 11:00 AM 2012 G
+% Last Change: Thu Dec 06 11:00 AM 2012 G
+%
+\documentclass[a4paper]{article}
+\usepackage[hmargin=2cm,vmargin=2cm]{geometry}
+
+\title{Markerless 26-DOF Hand Pose Recovery}
+\begin{document}
+  \maketitle
+  \begin{abstract}
+    The recovery of the orientation, articulation, and position of objects in 3D space is a difficult problem which is of fundamental importance to many applications.  The specific problem of recovering human hand pose has applications in many areas including sign language recognition, human computer interaction and robotics.  Robust systems exist which rely on visual aids to track the position of each part of the hand, however the wearing of gloves or special sensors is not ideal in most scenarios.  We would like an efficient markerless system which will allow a hand pose to be recovered with little inconvenience to the user.
+  \end{abstract}
+
+  \section*{The Project}
+  The project will involve the implementation of a system proposed by Oikonimidis et al~\cite{hand}.  The system uses a multi-camera setup and skin colour information to locate a hand in a scene.  Pose recovery is then treated as an optimisation problem where we minimise the difference between the observation and the rendering of a parametric 3D hand model.  The model can articulate with 26 degrees of freedom and is constrained by anatomical studies of the hand to ensure the model avoids impossible poses.  Optimisation is done over the parameter space of the model using a particle swarm algorithm, which, due to its parallel nature can be run very quickly on a GPU.  The result is a system which is capable of real time markerless recovery of the pose of a hand in any conceivable articulation, orientation or position.
+  
+  \section*{Possible Extensions}
+    Possible extensions to the work can be carried out if sufficient time is available.  Since a hand is a tool for interacting with objects and environments, extensions to the work focus on the recovery of pose in situations which do not rely on the hand being isolated in the scene.
+    \subsection*{Pose Recovery of a Hand Occluded by a Known Object}
+    Given a known object, the model can be extended to recover the pose of a hand interacting with the object.  These extensions are detailed in a paper published by Oikonomidis et al~\cite{object}
+    \subsection*{Markerless Pose Recovery of Two Interacting Hands}
+      Another possible extension is proposed by Oikonomidis et al~\cite{otherhand} which recovers pose of two hands simulataneously from a scene regardless of interactions or occlusions.
+
+  \bibliographystyle{plain}
+  \bibliography{proposal}
+\end{document}
+
