@@ -1,0 +1,230 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<!DOCTYPE svg PUBLIC "-//W3C//DTD SVG 1.0//EN" "http://www.w3.org/TR/2001/PR-SVG-20010719/DTD/svg10.dtd">
+<svg width="31cm" height="68cm" viewBox="159 -121 608 1355" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink">
+  <g>
+    <rect style="fill: #ffffff" x="262" y="474" width="460" height="400"/>
+    <rect style="fill: none; fill-opacity:0; stroke-width: 2; stroke: #000000" x="262" y="474" width="460" height="400"/>
+  </g>
+  <g>
+    <rect style="fill: #ffffff" x="320" y="-40" width="340" height="38"/>
+    <rect style="fill: none; fill-opacity:0; stroke-width: 2; stroke: #000000" x="320" y="-40" width="340" height="38"/>
+    <text style="fill: #000000;text-anchor:middle;font-size:12.8;font-family:sanserif;font-style:normal;font-weight:normal" x="490" y="-17.1">
+      <tspan x="490" y="-17.1">Capture multiframe</tspan>
+    </text>
+  </g>
+  <text style="fill: #000000;text-anchor:start;font-size:12.8;font-family:sanserif;font-style:normal;font-weight:normal" x="490" y="-2">
+    <tspan x="490" y="-2"></tspan>
+  </text>
+  <text style="fill: #000000;text-anchor:start;font-size:12.8;font-family:sanserif;font-style:normal;font-weight:normal" x="370" y="170">
+    <tspan x="370" y="170"></tspan>
+  </text>
+  <g>
+    <rect style="fill: #ffffff" x="320" y="40" width="340" height="38"/>
+    <rect style="fill: none; fill-opacity:0; stroke-width: 2; stroke: #000000" x="320" y="40" width="340" height="38"/>
+    <text style="fill: #000000;text-anchor:middle;font-size:12.8;font-family:sanserif;font-style:normal;font-weight:normal" x="490" y="62.9">
+      <tspan x="490" y="62.9">Extract skin colour region</tspan>
+    </text>
+  </g>
+  <g>
+    <rect style="fill: #ffffff" x="320" y="120" width="340" height="38"/>
+    <rect style="fill: none; fill-opacity:0; stroke-width: 2; stroke: #000000" x="320" y="120" width="340" height="38"/>
+    <text style="fill: #000000;text-anchor:middle;font-size:12.8;font-family:sanserif;font-style:normal;font-weight:normal" x="490" y="142.9">
+      <tspan x="490" y="142.9">Calculate edge image and edge distance image</tspan>
+    </text>
+  </g>
+  <g>
+    <rect style="fill: #ffffff" x="282" y="514" width="421.5" height="70"/>
+    <rect style="fill: none; fill-opacity:0; stroke-width: 2; stroke: #000000" x="282" y="514" width="421.5" height="70"/>
+    <text style="fill: #000000;text-anchor:middle;font-size:12.8;font-family:sanserif;font-style:normal;font-weight:normal" x="492.75" y="536.9">
+      <tspan x="492.75" y="536.9">Create tiled rendering of multiple hand poses corresponding</tspan>
+      <tspan x="492.75" y="552.9">to pose given position for each capture device and number</tspan>
+      <tspan x="492.75" y="568.9">of particles in swarm</tspan>
+    </text>
+  </g>
+  <text style="fill: #000000;text-anchor:start;font-size:12.8;font-family:sanserif;font-style:normal;font-weight:normal" x="542" y="688.5">
+    <tspan x="542" y="688.5"></tspan>
+  </text>
+  <text style="fill: #000000;text-anchor:start;font-size:12.8;font-family:sanserif;font-style:normal;font-weight:normal" x="278" y="465">
+    <tspan x="278" y="465">Run on GPU</tspan>
+  </text>
+  <g>
+    <rect style="fill: #ffffff" x="282" y="634" width="420" height="38"/>
+    <rect style="fill: none; fill-opacity:0; stroke-width: 2; stroke: #000000" x="282" y="634" width="420" height="38"/>
+    <text style="fill: #000000;text-anchor:middle;font-size:12.8;font-family:sanserif;font-style:normal;font-weight:normal" x="492" y="656.9">
+      <tspan x="492" y="656.9">Calculate edge image of rendering</tspan>
+    </text>
+  </g>
+  <g>
+    <rect style="fill: #ffffff" x="282" y="714" width="420" height="38"/>
+    <rect style="fill: none; fill-opacity:0; stroke-width: 2; stroke: #000000" x="282" y="714" width="420" height="38"/>
+    <text style="fill: #000000;text-anchor:middle;font-size:12.8;font-family:sanserif;font-style:normal;font-weight:normal" x="492" y="736.9">
+      <tspan x="492" y="736.9">Generate cue maps</tspan>
+    </text>
+  </g>
+  <g>
+    <rect style="fill: #ffffff" x="282" y="794" width="420" height="38"/>
+    <rect style="fill: none; fill-opacity:0; stroke-width: 2; stroke: #000000" x="282" y="794" width="420" height="38"/>
+    <text style="fill: #000000;text-anchor:middle;font-size:12.8;font-family:sanserif;font-style:normal;font-weight:normal" x="492" y="816.9">
+      <tspan x="492" y="816.9">Reduce cue maps</tspan>
+    </text>
+  </g>
+  <g>
+    <rect style="fill: #ffffff" x="282" y="914" width="420" height="38"/>
+    <rect style="fill: none; fill-opacity:0; stroke-width: 2; stroke: #000000" x="282" y="914" width="420" height="38"/>
+    <text style="fill: #000000;text-anchor:middle;font-size:12.8;font-family:sanserif;font-style:normal;font-weight:normal" x="492" y="936.9">
+      <tspan x="492" y="936.9">Record E value if better than previous generations</tspan>
+    </text>
+  </g>
+  <g>
+    <rect style="fill: #ffffff" x="324" y="194" width="336" height="38"/>
+    <rect style="fill: none; fill-opacity:0; stroke-width: 2; stroke: #000000" x="324" y="194" width="336" height="38"/>
+    <text style="fill: #000000;text-anchor:middle;font-size:12.8;font-family:sanserif;font-style:normal;font-weight:normal" x="492" y="216.9">
+      <tspan x="492" y="216.9">Initialise particle positions for PSO</tspan>
+    </text>
+  </g>
+  <g>
+    <line style="fill: none; fill-opacity:0; stroke-width: 2; stroke: #000000" x1="490" y1="-1.46094" x2="490" y2="30.2639"/>
+    <polygon style="fill: #000000" points="490,37.7639 485,27.7639 490,30.2639 495,27.7639 "/>
+    <polygon style="fill: none; fill-opacity:0; stroke-width: 2; stroke: #000000" points="490,37.7639 485,27.7639 490,30.2639 495,27.7639 "/>
+  </g>
+  <g>
+    <line style="fill: none; fill-opacity:0; stroke-width: 2; stroke: #000000" x1="490" y1="78" x2="490" y2="110.264"/>
+    <polygon style="fill: #000000" points="490,117.764 485,107.764 490,110.264 495,107.764 "/>
+    <polygon style="fill: none; fill-opacity:0; stroke-width: 2; stroke: #000000" points="490,117.764 485,107.764 490,110.264 495,107.764 "/>
+  </g>
+  <g>
+    <line style="fill: none; fill-opacity:0; stroke-width: 2; stroke: #000000" x1="492" y1="752" x2="492" y2="784.264"/>
+    <polygon style="fill: #000000" points="492,791.764 487,781.764 492,784.264 497,781.764 "/>
+    <polygon style="fill: none; fill-opacity:0; stroke-width: 2; stroke: #000000" points="492,791.764 487,781.764 492,784.264 497,781.764 "/>
+  </g>
+  <g>
+    <line style="fill: none; fill-opacity:0; stroke-width: 2; stroke: #000000" x1="492" y1="672" x2="492" y2="704.264"/>
+    <polygon style="fill: #000000" points="492,711.764 487,701.764 492,704.264 497,701.764 "/>
+    <polygon style="fill: none; fill-opacity:0; stroke-width: 2; stroke: #000000" points="492,711.764 487,701.764 492,704.264 497,701.764 "/>
+  </g>
+  <g>
+    <line style="fill: none; fill-opacity:0; stroke-width: 2; stroke: #000000" x1="492.75" y1="584" x2="492.146" y2="624.265"/>
+    <polygon style="fill: #000000" points="492.034,631.764 487.184,621.69 492.146,624.265 497.183,621.84 "/>
+    <polygon style="fill: none; fill-opacity:0; stroke-width: 2; stroke: #000000" points="492.034,631.764 487.184,621.69 492.146,624.265 497.183,621.84 "/>
+  </g>
+  <g>
+    <line style="fill: none; fill-opacity:0; stroke-width: 2; stroke: #000000" x1="492" y1="474" x2="492.567" y2="504.266"/>
+    <polygon style="fill: #000000" points="492.708,511.764 487.521,501.86 492.567,504.266 497.52,501.672 "/>
+    <polygon style="fill: none; fill-opacity:0; stroke-width: 2; stroke: #000000" points="492.708,511.764 487.521,501.86 492.567,504.266 497.52,501.672 "/>
+  </g>
+  <g>
+    <rect style="fill: #ffffff" x="282" y="1085" width="420" height="38"/>
+    <rect style="fill: none; fill-opacity:0; stroke-width: 2; stroke: #000000" x="282" y="1085" width="420" height="38"/>
+    <text style="fill: #000000;text-anchor:middle;font-size:12.8;font-family:sanserif;font-style:normal;font-weight:normal" x="492" y="1107.9">
+      <tspan x="492" y="1107.9">Render best value of E on top of captured images</tspan>
+    </text>
+  </g>
+  <g>
+    <polyline style="fill: none; fill-opacity:0; stroke-width: 2; stroke: #000000" points="393,1202 160,1202 160,-21 310.264,-21 "/>
+    <polygon style="fill: #000000" points="317.764,-21 307.764,-16 310.264,-21 307.764,-26 "/>
+    <polygon style="fill: none; fill-opacity:0; stroke-width: 2; stroke: #000000" points="317.764,-21 307.764,-16 310.264,-21 307.764,-26 "/>
+  </g>
+  <text style="fill: #000000;text-anchor:start;font-size:12.8;font-family:sanserif;font-style:normal;font-weight:normal" x="340" y="200">
+    <tspan x="340" y="200"></tspan>
+  </text>
+  <g>
+    <line style="fill: none; fill-opacity:0; stroke-width: 2; stroke: #000000" x1="492" y1="832" x2="492" y2="864.264"/>
+    <polygon style="fill: #000000" points="492,871.764 487,861.764 492,864.264 497,861.764 "/>
+    <polygon style="fill: none; fill-opacity:0; stroke-width: 2; stroke: #000000" points="492,871.764 487,861.764 492,864.264 497,861.764 "/>
+  </g>
+  <g>
+    <line style="fill: none; fill-opacity:0; stroke-width: 2; stroke: #000000" x1="492" y1="874" x2="492" y2="904.264"/>
+    <polygon style="fill: #000000" points="492,911.764 487,901.764 492,904.264 497,901.764 "/>
+    <polygon style="fill: none; fill-opacity:0; stroke-width: 2; stroke: #000000" points="492,911.764 487,901.764 492,904.264 497,901.764 "/>
+  </g>
+  <g>
+    <polygon style="fill: #ffffff" points="423.831,-120 582.934,-120 569.103,-82 410,-82 "/>
+    <polygon style="fill: none; fill-opacity:0; stroke-width: 2; stroke: #000000" points="423.831,-120 582.934,-120 569.103,-82 410,-82 "/>
+    <text style="fill: #000000;text-anchor:middle;font-size:12.8;font-family:sanserif;font-style:normal;font-weight:normal" x="496.467" y="-97.1">
+      <tspan x="496.467" y="-97.1">Multi-camera setup</tspan>
+    </text>
+  </g>
+  <g>
+    <line style="fill: none; fill-opacity:0; stroke-width: 2; stroke: #000000" x1="489.552" y1="-82" x2="489.785" y2="-50.2749"/>
+    <polygon style="fill: #000000" points="489.84,-42.7751 484.767,-52.7381 489.785,-50.2749 494.767,-52.8115 "/>
+    <polygon style="fill: none; fill-opacity:0; stroke-width: 2; stroke: #000000" points="489.84,-42.7751 484.767,-52.7381 489.785,-50.2749 494.767,-52.8115 "/>
+  </g>
+  <g>
+    <polygon style="fill: #ffffff" points="492.009,286 582.019,323.756 492.009,361.512 402,323.756 "/>
+    <polygon style="fill: none; fill-opacity:0; stroke-width: 2; stroke: #000000" points="492.009,286 582.019,323.756 492.009,361.512 402,323.756 "/>
+    <text style="fill: #000000;text-anchor:middle;font-size:12.8;font-family:sanserif;font-style:normal;font-weight:normal" x="492.009" y="327.656">
+      <tspan x="492.009" y="327.656">PSO finished?</tspan>
+    </text>
+  </g>
+  <text style="fill: #000000;text-anchor:start;font-size:12.8;font-family:sanserif;font-style:normal;font-weight:normal" x="512" y="371">
+    <tspan x="512" y="371">No</tspan>
+  </text>
+  <g>
+    <line style="fill: none; fill-opacity:0; stroke-width: 2; stroke: #000000" x1="492" y1="232" x2="492.008" y2="276.264"/>
+    <polygon style="fill: #000000" points="492.009,283.764 487.007,273.765 492.008,276.264 497.007,273.763 "/>
+    <polygon style="fill: none; fill-opacity:0; stroke-width: 2; stroke: #000000" points="492.009,283.764 487.007,273.765 492.008,276.264 497.007,273.763 "/>
+  </g>
+  <text style="fill: #000000;text-anchor:start;font-size:12.8;font-family:sanserif;font-style:normal;font-weight:normal" x="362" y="318">
+    <tspan x="362" y="318">Yes</tspan>
+  </text>
+  <g>
+    <path style="fill: #ffffff" d="M 421.571 1172 L 564.429,1172 C 585.857,1184 593,1190 593,1202 C 593,1214 585.857,1220 564.429,1232 L 421.571,1232 L 393,1202 L 421.571,1172z"/>
+    <path style="fill: none; fill-opacity:0; stroke-width: 2; stroke: #000000" d="M 421.571 1172 L 564.429,1172 C 585.857,1184 593,1190 593,1202 C 593,1214 585.857,1220 564.429,1232 L 421.571,1232 L 393,1202 L 421.571,1172"/>
+    <text style="fill: #000000;text-anchor:middle;font-size:12.8;font-family:sanserif;font-style:normal;font-weight:normal" x="493" y="1206">
+      <tspan x="493" y="1206">Display frame</tspan>
+    </text>
+  </g>
+  <g>
+    <line style="fill: none; fill-opacity:0; stroke-width: 2; stroke: #000000" x1="492" y1="1123" x2="492.801" y2="1162.27"/>
+    <polygon style="fill: #000000" points="492.954,1169.76 487.751,1159.87 492.801,1162.27 497.749,1159.66 "/>
+    <polygon style="fill: none; fill-opacity:0; stroke-width: 2; stroke: #000000" points="492.954,1169.76 487.751,1159.87 492.801,1162.27 497.749,1159.66 "/>
+  </g>
+  <g>
+    <rect style="fill: #ffffff" x="293.725" y="391.6" width="396.55" height="54"/>
+    <rect style="fill: none; fill-opacity:0; stroke-width: 2; stroke: #000000" x="293.725" y="391.6" width="396.55" height="54"/>
+    <text style="fill: #000000;text-anchor:middle;font-size:12.8;font-family:sanserif;font-style:normal;font-weight:normal" x="492" y="414.5">
+      <tspan x="492" y="414.5">Decode particle positions in parameter space as</tspan>
+      <tspan x="492" y="430.5">transformation matrices</tspan>
+    </text>
+  </g>
+  <text style="fill: #000000;text-anchor:start;font-size:12.7998;font-family:sanserif;font-style:normal;font-weight:normal" x="492" y="418.6">
+    <tspan x="492" y="418.6"></tspan>
+  </text>
+  <g>
+    <line style="fill: none; fill-opacity:0; stroke-width: 2; stroke: #000000" x1="492.009" y1="361.512" x2="492.003" y2="381.864"/>
+    <polygon style="fill: #000000" points="492.001,389.364 487.004,379.362 492.003,381.864 497.004,379.365 "/>
+    <polygon style="fill: none; fill-opacity:0; stroke-width: 2; stroke: #000000" points="492.001,389.364 487.004,379.362 492.003,381.864 497.004,379.365 "/>
+  </g>
+  <g>
+    <line style="fill: none; fill-opacity:0; stroke-width: 2; stroke: #000000" x1="492" y1="445.6" x2="492" y2="464.264"/>
+    <polygon style="fill: #000000" points="492,471.764 487,461.764 492,464.264 497,461.764 "/>
+    <polygon style="fill: none; fill-opacity:0; stroke-width: 2; stroke: #000000" points="492,471.764 487,461.764 492,464.264 497,461.764 "/>
+  </g>
+  <g>
+    <line style="fill: none; fill-opacity:0; stroke-width: 2; stroke: #000000" x1="490" y1="158" x2="490.919" y2="183.276"/>
+    <polygon style="fill: #000000" points="491.192,190.772 485.832,180.96 490.919,183.276 495.825,180.596 "/>
+    <polygon style="fill: none; fill-opacity:0; stroke-width: 2; stroke: #000000" points="491.192,190.772 485.832,180.96 490.919,183.276 495.825,180.596 "/>
+  </g>
+  <g>
+    <polyline style="fill: none; fill-opacity:0; stroke-width: 2; stroke: #000000" points="402,323.756 184,323 183.504,1113 272.264,1113.45 "/>
+    <polygon style="fill: #000000" points="279.764,1113.49 269.739,1118.44 272.264,1113.45 269.789,1108.44 "/>
+    <polygon style="fill: none; fill-opacity:0; stroke-width: 2; stroke: #000000" points="279.764,1113.49 269.739,1118.44 272.264,1113.45 269.789,1108.44 "/>
+  </g>
+  <g>
+    <rect style="fill: #ffffff" x="280.5" y="995.8" width="420" height="38"/>
+    <rect style="fill: none; fill-opacity:0; stroke-width: 2; stroke: #000000" x="280.5" y="995.8" width="420" height="38"/>
+    <text style="fill: #000000;text-anchor:middle;font-size:12.8;font-family:sanserif;font-style:normal;font-weight:normal" x="490.5" y="1018.7">
+      <tspan x="490.5" y="1018.7">Update particle positions</tspan>
+    </text>
+  </g>
+  <g>
+    <line style="fill: none; fill-opacity:0; stroke-width: 2; stroke: #000000" x1="492" y1="952" x2="490.833" y2="986.07"/>
+    <polygon style="fill: #000000" points="490.577,993.565 485.922,983.4 490.833,986.07 495.916,983.742 "/>
+    <polygon style="fill: none; fill-opacity:0; stroke-width: 2; stroke: #000000" points="490.577,993.565 485.922,983.4 490.833,986.07 495.916,983.742 "/>
+  </g>
+  <g>
+    <polyline style="fill: none; fill-opacity:0; stroke-width: 2; stroke: #000000" points="700.5,1014.8 765.504,1015 765.504,323 591.755,323.716 "/>
+    <polygon style="fill: #000000" points="584.255,323.747 594.234,318.705 591.755,323.716 594.275,328.705 "/>
+    <polygon style="fill: none; fill-opacity:0; stroke-width: 2; stroke: #000000" points="584.255,323.747 594.234,318.705 591.755,323.716 594.275,328.705 "/>
+  </g>
+</svg>
