@@ -1,22 +1,3 @@
-/*
-
-	Copyright 2010 Etay Meiri
-
-  This program is free software: you can redistribute it and/or modify
-  it under the terms of the GNU General Public License as published by
-  the Free Software Foundation, either version 3 of the License, or
-  (at your option) any later version.
-
-  This program is distributed in the hope that it will be useful,
-  but WITHOUT ANY WARRANTY; without even the implied warranty of
-  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
-  GNU General Public License for more details.
-
-  You should have received a copy of the GNU General Public License
-  along with this program. If not, see <http://www.gnu.org/licenses/>.
-
-*/
-
 #include <stdio.h>
 #include <string.h>
 #include <math.h>
@@ -31,8 +12,6 @@
 #define WINDOW_WIDTH 1024 
 #define WINDOW_HEIGHT 1024
 
-GLuint VBO;
-GLuint IBO;
 GLuint gWVPLocation;
 
 static void render()
@@ -46,29 +25,23 @@ static void render()
   //
   glUniformMatrix4fv(gWVPLocation, 1, GL_TRUE, (const GLfloat*) &glm::perspective(60.0f, 1.0f, 1.0f, 100.0f)[0][0]);
 
-  glEnableVertexAttribArray(0);
-  glBindBuffer(GL_ARRAY_BUFFER, VBO);
-  glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 0, 0);
-  glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, IBO);
-  glDrawElements(GL_TRIANGLES, 12, GL_UNSIGNED_INT, 0);
-  glDisableVertexAttribArray(0);
-
+//  glEnableVertexAttribArray(0);
+//  glBindBuffer(GL_ARRAY_BUFFER, VBO);
+//  glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 0, 0);
+//  glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, IBO);
+//  glDrawElements(GL_TRIANGLES, 12, GL_UNSIGNED_INT, 0);
+//  glDisableVertexAttribArray(0);
+  
   glutSwapBuffers();
 }
 
+// Keyboard callbacks
 static void keyboard(unsigned char Key, int x, int y)
 {
   switch (Key) {
     case 'q':
       exit(0);
   }
-}
-
-static void initializeGlutCallbacks()
-{
-  glutDisplayFunc(render);
-  glutIdleFunc(render);
-  glutKeyboardFunc(keyboard);
 }
 
 static void createVertexBuffer()
@@ -98,18 +71,20 @@ static void createIndexBuffer()
 
 int main(int argc, char** argv)
 {
+  // Will eventually render to a framebuffer object
   glutInit(&argc, argv);
   glutInitDisplayMode(GLUT_DOUBLE|GLUT_RGBA);
   glutInitWindowSize(WINDOW_WIDTH, WINDOW_HEIGHT);
   glutInitWindowPosition(100, 100);
-  glutCreateWindow("Drawing");
-
-  initializeGlutCallbacks();
+  glutCreateWindow("Drawing stuff...");
+  glutDisplayFunc(render);
+  glutIdleFunc(render);
+  glutKeyboardFunc(keyboard);
 
   // Must be done after glut is initialized!
   GLenum res = glewInit();
   if (res != GLEW_OK) {
-   fprintf(stderr, "Error: '%s'\n", glewGetErrorString(res));
+   fprintf(stderr, " GLEW Error: '%s'\n", glewGetErrorString(res));
    return 1;
   }
 
@@ -120,7 +95,6 @@ int main(int argc, char** argv)
 
   //CompileShaders();
   Shader shader;
-
   // Load shaders from file
   shader.loadFromFile(GL_VERTEX_SHADER, "./src/shaders/vs.glslv");
   shader.loadFromFile(GL_FRAGMENT_SHADER, "./src/shaders/fs.glslf");
@@ -128,10 +102,12 @@ int main(int argc, char** argv)
   // Compile and then link the shaders
   shader.createAndLinkProgram();
   gWVPLocation = shader.addUniform("gWVP");
+  printf("Uniform location: %d\n", gWVPLocation);
   //gWVPLocation = shader("gWVP");
   shader.use();
 
   glutMainLoop();
 
+  shader.unUse();
   return 0;
 }

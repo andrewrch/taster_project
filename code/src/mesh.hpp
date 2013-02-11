@@ -6,15 +6,18 @@
 #define MESH_H
 
 #include <stdlib.h>
+#include <vector>
 #include <GL/glew.h>
 #include <glm/glm.hpp>
 #include <glm/gtc/matrix_transform.hpp>
 
+// This is for position in the VAO
 #define INDEX_BUFFER 0
 #define POS_VB 1
 // Ignore normals for now...
-#define NORMALS_VB 2
+#define NORMAL_VB 2
 #define WVP_MAT_VB 3
+
 
 // Replace this at some point
 #define ARRAY_SIZE_IN_ELEMENTS(a) (sizeof(a)/sizeof(a[0]))
@@ -27,11 +30,15 @@ class Mesh
     ~Mesh(void);
     void render(unsigned int numInstances, const glm::mat4* WVPMats);
 
-  private:
-    GLuint VAO;
-    // indexes, pos, normals, WVP
-    GLuint buffers[4];
+  protected:
+    bool setupArrays(
+        std::vector<glm::vec3>&, 
+        std::vector<glm::vec3>&, 
+        std::vector<unsigned int>&);
 
+    GLuint VAO;
+    // GL stuff for indexes, pos, normals, WVP
+    GLuint buffers[4];
     unsigned int numIndices;
 };
 

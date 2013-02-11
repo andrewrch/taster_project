@@ -1,11 +1,13 @@
-CFLAGS := -Wall -lm -lGL -lGLEW -lglut -DGL_GLEXT_PROTOTYPES
+CFLAGS := -g -Wall -lm -lGL -lGLEW -lglut
 
-all: draw
+all: hand_renderer
 
-draw: \
-	src/main.cpp \
-	src/camera.cpp \
-	src/camera.hpp \
+hand_renderer: \
+	src/hand_renderer.cpp \
+	src/glut_backend.hpp \
+	src/glut_backend.cpp \
+	src/pipeline.hpp \
+	src/pipeline.cpp \
 	src/shader.hpp \
 	src/shader.cpp \
 	src/mesh.hpp \
@@ -16,3 +18,6 @@ draw: \
 	src/cylinder.cpp \
 	Makefile
 		g++ -o $@ $(filter %.cpp,$^) $(CFLAGS) 
+
+clean:
+		rm -rf *o hand_renderer

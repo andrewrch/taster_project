@@ -1,11 +1,16 @@
+#include <vector>
+
 #include "mesh.hpp"
 
-class Sphere : Mesh
+class Sphere : public Mesh
 {
   public: 
     Sphere(unsigned int, unsigned int, unsigned int);
-    ~Sphere;
+    ~Sphere();
 
   private:
+    std::vector<glm::vec3> vertices, normals;
+    std::vector<unsigned int> indices;
 
-}
+    void makeSphere();
+};

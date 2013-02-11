@@ -1,6 +1,6 @@
 /*
 
-	Copyright 2010 Etay Meiri
+	Copyright 2011 Etay Meiri
 
     This program is free software: you can redistribute it and/or modify
     it under the terms of the GNU General Public License as published by
@@ -16,51 +16,16 @@
     along with this program.  If not, see <http://www.gnu.org/licenses/>.
 */
 
-#ifndef CAMERA_H
-#define	CAMERA_H
+#ifndef GLUT_BACKEND_H
+#define	GLUT_BACKEND_H
 
-#include <glm/glm.hpp>
+#include "callbacks.h"
 
-class Camera
-{
-public:
+void GLUTBackendInit(int argc, char** argv);
 
-    Camera(int, int);
+bool GLUTBackendCreateWindow(unsigned int Width, unsigned int Height, unsigned int bpp, bool isFullScreen, const char* pTitle);
 
-    Camera(int, int, const glm::vec3&, const glm::vec3&, const glm::vec3&);
+void GLUTBackendRun(ICallbacks* pCallbacks);
 
-    void onRender();
-
-    const glm::vec3& getPos() const
-    {
-        return pos;
-    }
-
-    const glm::vec3& getTarget() const
-    {
-        return target;
-    }
-
-    const glm::vec3& getUp() const
-    {
-        return up;
-    }
-
-private:
-
-    void init();
-    void update();
-
-    glm::vec3 pos;
-    glm::vec3 target;
-    glm::vec3 up;
-
-    int windowWidth;
-    int windowHeight;
-
-    float angleH;
-    float angleV;
-};
-
-#endif	/* CAMERA_H */
+#endif	/* GLUT_BACKEND_H */
 
