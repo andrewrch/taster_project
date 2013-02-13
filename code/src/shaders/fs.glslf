@@ -1,4 +1,4 @@
-#version 410
+#version 330
 
 flat in int instanceID;  
 in vec4 colour;

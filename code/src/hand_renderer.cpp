@@ -87,7 +87,7 @@ class HandRenderer : public ICallbacks
         sphereMesh->render(numInstances, sphereWVPMatrices); 
 //        cylinderMesh->render(numInstances, cylinderWVPMatrices);
         
-        printf("Drawn stuff...\n");
+//        printf("Drawn stuff...\n");
         glutSwapBuffers();
     }
 
