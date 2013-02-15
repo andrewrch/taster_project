@@ -12,10 +12,6 @@ hand_renderer: \
 	src/shader.cpp \
 	src/mesh.hpp \
 	src/mesh.cpp \
-	src/sphere.hpp \
-	src/sphere.cpp \
-	src/cylinder.hpp \
-	src/cylinder.cpp \
 	Makefile
 		g++ -o $@ $(filter %.cpp,$^) $(CFLAGS) 
 

@@ -1,98 +1,308 @@
-#include "mesh.hpp"
+/*
+	Copyright 2011 Etay Meiri
 
-// For absolute position for the shader
-#define POSITION_LOCATION 0
-#define NORMAL_LOCATION 1
-#define WVP_LOCATION 2
-#define WORLD_LOCATION 6
+    This program is free software: you can redistribute it and/or modify
+    it under the terms of the GNU General Public License as published by
+    the Free Software Foundation, either version 3 of the License, or
+    (at your option) any later version.
+
+    This program is distributed in the hope that it will be useful,
+    but WITHOUT ANY WARRANTY; without even the implied warranty of
+    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+    GNU General Public License for more details.
+
+    You should have received a copy of the GNU General Public License
+    along with this program.  If not, see <http://www.gnu.org/licenses/>.
+*/
+
+#include <assert.h>
+#include <cmath>
+#include "mesh.hpp"
 
 using namespace std;
 
-Mesh::Mesh() 
+#define POSITION_LOCATION 0
+#define NORMAL_LOCATION 1
+#define WVP_LOCATION 2
+//#define WORLD_LOCATION 6
+//
+static const int NUMBER_OF_PRIMITIVES = 2;
+
+Mesh::Mesh() :
+  VAO(0),
+  entries(NUMBER_OF_PRIMITIVES)
 {
-  // Create the VAO
-  glGenVertexArrays(1, &VAO);   
-  glBindVertexArray(VAO);
-  // Create the buffers for the vertices attributes
-  glGenBuffers(ARRAY_SIZE_IN_ELEMENTS(buffers), buffers);
-  glBindVertexArray(0);
+    ZERO_MEM(buffers);
 }
 
-Mesh::~Mesh() 
+Mesh::~Mesh()
 {
-  if (buffers[0] != 0) 
-    glDeleteBuffers(ARRAY_SIZE_IN_ELEMENTS(buffers), buffers);
+    clear();
+}
+
+
+void Mesh::clear()
+{
+    if (buffers[0] != 0) {
+        glDeleteBuffers(ARRAY_SIZE_IN_ELEMENTS(buffers), buffers);
+    }
        
-  if (VAO != 0) 
-    glDeleteVertexArrays(1, &VAO);
+    if (VAO != 0) {
+        glDeleteVertexArrays(1, &VAO);
+        VAO = 0;
+    }
 }
 
-bool Mesh::setupArrays(
-    vector<glm::vec3>& positions,
-    vector<glm::vec3>& normals,
-    vector<unsigned int>& indices)
+bool Mesh::init(
+    double sphereRadius,
+    unsigned int sphereRings,
+    unsigned int sphereSectors,
+    double cylinderRadius,
+    double cylinderHeight,
+    unsigned int cylinderSides)
 {
-  // Generate and populate the buffers with vertex attributes and the indices
-  glBindBuffer(GL_ARRAY_BUFFER, buffers[POS_VB]);
-  glBufferData(GL_ARRAY_BUFFER, sizeof(positions[0]) * positions.size(), &positions[0], GL_STATIC_DRAW);
-  glEnableVertexAttribArray(POSITION_LOCATION);
-  glVertexAttribPointer(POSITION_LOCATION, 3, GL_FLOAT, GL_FALSE, 0, 0);    
-
-  glBindBuffer(GL_ARRAY_BUFFER, buffers[NORMAL_VB]);
-	glBufferData(GL_ARRAY_BUFFER, sizeof(normals[0]) * normals.size(), &normals[0], GL_STATIC_DRAW);
-  glEnableVertexAttribArray(NORMAL_LOCATION);
-  glVertexAttribPointer(NORMAL_LOCATION, 3, GL_FLOAT, GL_FALSE, 0, 0);
-
-  glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, buffers[INDEX_BUFFER]);
-	glBufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof(indices[0]) * indices.size(), &indices[0], GL_STATIC_DRAW);
-
-  glBindBuffer(GL_ARRAY_BUFFER, buffers[WVP_MAT_VB]);
+    // Release the previously loaded mesh (if it exists)
+    clear();
+ 
+    // Create the VAO
+    glGenVertexArrays(1, &VAO);   
+    glBindVertexArray(VAO);
     
-  for (unsigned int i = 0; i < 4 ; i++) 
-  {
-    glEnableVertexAttribArray(WVP_LOCATION + i);
-    glVertexAttribPointer(
-        WVP_LOCATION + i, 
-        4, 
-        GL_FLOAT, 
-        GL_FALSE, 
-        sizeof(glm::mat4), 
-        (const GLvoid*)(sizeof(GLfloat) * i * 4));
+    // Create the buffers for the vertices attributes
+    glGenBuffers(ARRAY_SIZE_IN_ELEMENTS(buffers), buffers);
+    // Create entries for all primitives used for modelling
+    entries.resize(NUMBER_OF_PRIMITIVES);
+    // Vectors to hold all data about primitives
+    vector<glm::vec3> positions;
+    vector<glm::vec3> normals;
+    vector<unsigned int> indices;
+
+
+    // Init sphere first
+    unsigned int numIndices = sphereRings * sphereSectors * 4;
+    unsigned int numVertices = sphereRings * sphereSectors * 3;
+
+    entries[0].baseIndex = 0;
+    entries[0].baseVertex = 0;
+    entries[0].numIndices = numIndices;
+
+    // Reserve space in the vectors for the sphere
+    positions.reserve(numVertices);
+    normals.reserve(numVertices);
+    indices.reserve(numIndices);
+
+    initSphere(
+        sphereRadius, 
+        sphereRings, 
+        sphereSectors,
+        positions,
+        normals,
+        indices);
+
+    entries[1].baseIndex = numIndices;
+    entries[1].baseVertex = numVertices;
+
+    numIndices = 6 * cylinderSides;
+    numVertices = 2 * cylinderSides;
+
+    entries[1].numIndices = numIndices;
+
+    // Reserve space in the vectors for the cylinder
+    positions.reserve(numVertices);
+    normals.reserve(numVertices);
+    indices.reserve(numIndices);
+
+    initCylinder(
+        cylinderRadius,
+        cylinderHeight,
+        cylinderSides,
+        positions,
+        normals,
+        indices);
+    
+    // Generate and populate the buffers with vertex attributes and the indices
+  	glBindBuffer(GL_ARRAY_BUFFER, buffers[POS_VB]);
+    glBufferData(
+        GL_ARRAY_BUFFER, 
+        sizeof(positions[0]) * positions.size(), 
+        &positions[0], 
+        GL_STATIC_DRAW);
+    glEnableVertexAttribArray(POSITION_LOCATION);
+    glVertexAttribPointer(POSITION_LOCATION, 3, GL_FLOAT, GL_FALSE, 0, 0);    
+
+   	glBindBuffer(GL_ARRAY_BUFFER, buffers[NORMAL_VB]);
+  	glBufferData(
+        GL_ARRAY_BUFFER, 
+        sizeof(normals[0]) * normals.size(), 
+        &normals[0], 
+        GL_STATIC_DRAW);
+    glEnableVertexAttribArray(NORMAL_LOCATION);
+    glVertexAttribPointer(NORMAL_LOCATION, 3, GL_FLOAT, GL_FALSE, 0, 0);
+
+    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, buffers[INDEX_BUFFER]);
+  	glBufferData(
+        GL_ELEMENT_ARRAY_BUFFER, 
+        sizeof(indices[0]) * indices.size(), 
+        &indices[0], 
+        GL_STATIC_DRAW);
+
+    //printf("********************\n");
+    //printf("Indicees\n");
+    //printf("********************\n");
+    //for (int i = 0; i < indices.size(); i+=3)
+    //  printf("%u %u %u\n", indices[i], indices[i+1], indices[i+2]);
+
+    //printf("********************\n");
+    //printf("Vertices\n");
+    //printf("********************\n");
+    //for (int i = 0; i < positions.size(); i++)
+    //  printf("(%f, %f, %f)\n", positions[i].x, positions[i].y, positions[i].z);
+
+    //printf("********************\n");
+    //printf("Normals\n");
+    //rintf("********************\n");
+    //for (int i = 0; i < normals.size(); i++)
+    //  printf("(%f, %f, %f)\n", normals[i].x, normals[i].y, normals[i].z);
+
+    glBindBuffer(GL_ARRAY_BUFFER, buffers[WVP_MAT_VB]);
+    for (unsigned int i = 0; i < 4 ; i++) {
+        glEnableVertexAttribArray(WVP_LOCATION + i);
+        glVertexAttribPointer(
+            WVP_LOCATION + i, 
+            4, 
+            GL_FLOAT, 
+            GL_FALSE, 
+            sizeof(glm::mat4), 
+            (const GLvoid*)(sizeof(GLfloat) * i * 4));
         glVertexAttribDivisor(WVP_LOCATION + i, 1);
+    }
+
+    //glBindBuffer(GL_ARRAY_BUFFER, m_Buffers[WORLD_MAT_VB]);
+
+    //for (unsigned int i = 0; i < 4 ; i++) {
+    //    glEnableVertexAttribArray(WORLD_LOCATION + i);
+    //    glVertexAttribPointer(WORLD_LOCATION + i, 4, GL_FLOAT, GL_FALSE, sizeof(Matrix4f), (const GLvoid*)(sizeof(GLfloat) * i * 4));
+    //    glVertexAttribDivisor(WORLD_LOCATION + i, 1);
+    //}
+
+    // Make sure the VAO is not changed from the outside
+    glBindVertexArray(0);	
+    printf("GL error: %d\n", GLCheckError());
+    return GLCheckError();
+}
+
+
+/* Code here borrowed and modified from
+ * http://stackoverflow.com/questions/7957254/connecting-sphere-vertices-opengl
+ */
+void Mesh::initSphere(
+        double radius,
+        unsigned int rings,
+        unsigned int sectors,
+        std::vector<glm::vec3>& positions,
+        std::vector<glm::vec3>& normals,
+        std::vector<unsigned int>& indices)
+{
+  float const R = 1./(float)(rings-1);
+  float const S = 1./(float)(sectors-1);
+  unsigned int r, s;
+
+  for(r = 0; r < rings; r++) 
+    for(s = 0; s < sectors; s++) 
+    {
+      float const y = sin( -M_PI_2 + M_PI * r * R );
+      float const x = cos(2*M_PI * s * S) * sin( M_PI * r * R );
+      float const z = sin(2*M_PI * s * S) * sin( M_PI * r * R );
+
+      positions.push_back(glm::vec3(
+            x * radius,
+            y * radius,
+            z * radius));
+
+      normals.push_back(glm::vec3(x, y, z));
+    }
+
+  for(r = 0; r < rings; r++) 
+    for(s = 0; s < sectors; s++) 
+  {
+    indices.push_back(r * sectors + s);
+    indices.push_back(r * sectors + (s+1));
+    indices.push_back((r+1) * sectors + (s+1));
+    indices.push_back((r+1) * sectors + s);
+  }
+}
+
+/* Code modified from some at:
+ * http://stackoverflow.com/questions/4170603/how-do-i-draw-a-cylinder-in-opentk-glu-cylinder
+ */
+void Mesh::initCylinder(
+        double radius,
+        double height,
+        unsigned int sides,
+        std::vector<glm::vec3>& positions,
+        std::vector<glm::vec3>& normals,
+        std::vector<unsigned int>& indices)
+{
+  for (unsigned int y = 0; y < 2; y++)
+  {
+    for (unsigned int x = 0; x < sides; x++)  
+    {
+        double theta = ((double) x / (sides - 1)) * 2 * M_PI;
+        glm::vec3 p(radius * cos(theta),  height * y, radius * sin(theta));
+        positions.push_back(p);
+        normals.push_back(glm::vec3(p.x / radius, p.y / radius, 0));
+    }
   }
 
- // glBindBuffer(GL_ARRAY_BUFFER, buffers[WORLD_MAT_VB]);
- // for (unsigned int i = 0; i < 4 ; i++) 
- // {
- //   glEnableVertexAttribArray(WORLD_LOCATION + i);
- //   glVertexAttribPointer(
- //       WORLD_LOCATION + i, 
- //       4, 
- //       GL_FLOAT, 
- //       GL_FALSE, 
- //       sizeof(glm::mat4), 
- //       (const GLvoid*)(sizeof(GLfloat) * i * 4));
- //   glVertexAttribDivisor(WORLD_LOCATION + i, 1);
- // }    
+  for (unsigned int x = 0; x < sides - 1; x++)
+  {
+    indices.push_back(x);
+    indices.push_back(x + sides);
+    indices.push_back(x + sides + 1);
 
-  // Unbind
-  glBindVertexArray(0);	
-  return glGetError() == GL_NO_ERROR;
+    indices.push_back(x + sides + 1);
+    indices.push_back(x + 1);
+    indices.push_back(x);
+  }
 }
 
-void Mesh::render(unsigned int numInstances, const glm::mat4* WVPMats)
-{
-  glBindBuffer(GL_ARRAY_BUFFER, buffers[WVP_MAT_VB]);
-  glBufferData(GL_ARRAY_BUFFER, sizeof(glm::mat4) * numInstances, WVPMats, GL_DYNAMIC_DRAW);
+//GLuint VBO;
 
-  glBindVertexArray(VAO);
+void Mesh::render(
+    unsigned int numSpheres, 
+    const glm::mat4* sphereWVPs, 
+    unsigned int numCylinders, 
+    const glm::mat4* cylinderWVPs)
+{        
+    glBindBuffer(GL_ARRAY_BUFFER, buffers[WVP_MAT_VB]);
+    glBufferData(GL_ARRAY_BUFFER, sizeof(glm::mat4) * numSpheres, sphereWVPs, GL_DYNAMIC_DRAW);
 
-  glDrawElementsInstanced(GL_TRIANGLES, 
-                          //numIndices, 
-                          12, 
-                          GL_UNSIGNED_INT,
-                          NULL,
-                          numInstances);
+//    printf("%d %d %d %d\n", entries[0].numIndices, numSpheres, entries[0].baseVertex, entries[0].baseIndex);
+//    printf("%d %d %d %d\n", entries[1].numIndices, numCylinders, entries[1].baseVertex, entries[1].baseIndex);
+//    glBindBuffer(GL_ARRAY_BUFFER, m_Buffers[WORLD_MAT_VB]);
+//    glBufferData(GL_ARRAY_BUFFER, sizeof(Matrix4f) * NumInstances, WorldMats, GL_DYNAMIC_DRAW);
 
-  glBindVertexArray(0);
+    glBindVertexArray(VAO);
+		glDrawElementsInstancedBaseVertex(GL_TRIANGLES, 
+                                      entries[0].numIndices, 
+                                      GL_UNSIGNED_INT, 
+                                      (void*)(sizeof(unsigned int) * entries[0].baseIndex), 
+                                      numSpheres,
+                                      entries[0].baseVertex);
+
+    ////// FIXME - This might not be necessary
+    //glBindVertexArray(0);
+    ////// FIXME - This might not be necessary
+    ////
+    //glBindBuffer(GL_ARRAY_BUFFER, buffers[WVP_MAT_VB]);
+    //glBufferData(GL_ARRAY_BUFFER, sizeof(glm::mat4) * numCylinders, cylinderWVPs, GL_DYNAMIC_DRAW);
+
+    //glBindVertexArray(VAO);
+		//glDrawElementsInstancedBaseVertex(GL_TRIANGLES, 
+    //                                  entries[1].numIndices, 
+    //                                  GL_UNSIGNED_INT, 
+    //                                  (void*)(sizeof(unsigned int) * entries[1].baseIndex), 
+    //                                  numCylinders,
+    //                                  entries[1].baseVertex);
+    glBindVertexArray(0);
 }

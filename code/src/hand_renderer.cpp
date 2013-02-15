@@ -8,13 +8,12 @@
 #include <glm/gtc/matrix_transform.hpp>
 
 #include "pipeline.hpp"
-#include "sphere.hpp"
-#include "cylinder.hpp"
+#include "mesh.hpp"
 #include "shader.hpp"
 #include "glut_backend.hpp"
 
-#define WINDOW_WIDTH 1024 
-#define WINDOW_HEIGHT 1024
+static const int WINDOW_WIDTH = 1024;
+static const int WINDOW_HEIGHT = 1024;
 
 class HandRenderer : public ICallbacks
 {
@@ -22,31 +21,25 @@ class HandRenderer : public ICallbacks
 
     HandRenderer()
     {
-        sphereMesh = NULL;
-//        cylinderMesh = NULL;
     }
 
     ~HandRenderer()
     {
-      /* Important - delete meshes else this will 
-       * get big very quickly
-       */
     }    
 
     bool init()
     {
         // Some initial vectors for camera
-        glm::vec3 pos(7.0f, 3.0f, 0.0f);
-        glm::vec3 target(0.0f, -0.2f, 1.0f);
+        glm::vec3 pos(100.0f, 100.0f, 0.0f);
+        glm::vec3 target(0.0f, 0.0f, 0.0f);
         glm::vec3 up(0.0, 1.0f, 0.0f);
 
         p.setCamera(pos, target, up);
-        p.setPerspectiveProj(60.0f, (float) WINDOW_HEIGHT/WINDOW_WIDTH, 1.0f, 100.0f);   
+        p.setPerspectiveProj(50.0f, (float) WINDOW_HEIGHT/WINDOW_WIDTH, 1.0f, 100.0f);   
         p.setRotate(0.0f, 90.0f, 0.0f);
 
         // Get meshes initialised
-        sphereMesh = new Sphere(1, 1, 1/*Some args here*/);
-//        cylinderMesh = new Cylinder(/*Some args here*/);
+        mesh.init(1.0f, 10, 10, 1.0f, 10.0f, 10);
 
         // Record time for FPS count.
         time = glutGet(GLUT_ELAPSED_TIME);
@@ -69,25 +62,34 @@ class HandRenderer : public ICallbacks
         //calcFPS();
         
         // Clear all the GL stuff ready for rendering.
-        //glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+        glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
-        int numInstances = 1200;
-        glm::mat4 sphereWVPMatrices[numInstances];
-        glm::mat4 cylinderWVPMatrices[numInstances];
-        glm::mat4 worldMatrices[numInstances];
+        int numSpheres = 5;
+        glm::mat4 sphereWVPs[numSpheres];
+        int numCylinders = 5;
+        glm::mat4 cylinderWVPs[numCylinders];
 
-        for (int i = 0; i < numInstances; i++)
+        glm::mat4 wvp = p.getWVPTrans();
+        //for (int i = 0; i < 4; i++)
+        //  printf("%f %f %f %f\n", wvp[i][0], wvp[i][1], wvp[i][2], wvp[i][3]);
+        //printf("\n");
+
+        //glm::vec4 cat = wvp * glm::vec4(10, 10, 10, 1);
+
+        //printf("%f %f %f %f\n", cat[0], cat[1], cat[2], cat[3]);
+
+
+        for (int i = 0; i < numSpheres; i++)
         {
-          sphereWVPMatrices[i] = glm::mat4(1.0);
-//          printf("%d\n", sphereWVPMatrices[i][0][0]);
+          sphereWVPs[i] = p.getWVPTrans();
+        }
+
+        for (int i = 0; i < numCylinders; i++)
+        {
+          cylinderWVPs[i] = p.getWVPTrans();
         }
         
-        // Render meshes here...
-        //
-        sphereMesh->render(numInstances, sphereWVPMatrices); 
-//        cylinderMesh->render(numInstances, cylinderWVPMatrices);
-        
-//        printf("Drawn stuff...\n");
+        mesh.render(numSpheres, sphereWVPs, numCylinders, cylinderWVPs); 
         glutSwapBuffers();
     }
 
@@ -132,9 +134,7 @@ private:
         }
     }
     
-    Sphere* sphereMesh;
-    //Cylinder* cylinderMesh;
-    
+    Mesh mesh;
     Shader shader;
     Pipeline p;
     int time;

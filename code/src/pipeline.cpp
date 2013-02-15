@@ -15,40 +15,54 @@
     You should have received a copy of the GNU General Public License
     along with this program.  If not, see <http://www.gnu.org/licenses/>.
 */
+#include <stdio.h>
 
 #include "pipeline.hpp"
 
 const glm::mat4& Pipeline::getVPTrans()
 {
-//    glm::mat4 cameraTranslationTrans, cameraRotateTrans, persProjTrans;
+  glm::mat4 cameraTrans, projTrans;
 
-//    cameraTranslationTrans = glm::translate(glm::mat4, -camera.pos.x, -camera.pos.y, -camera.pos.z);
-//    cameraRotateTrans = glm::rotate(glm::mat4(1.0f), .InitCameraTransform(m_camera.Target, m_camera.Up);
-//    PersProjTrans.InitPersProjTransform(m_persProjInfo);
+  cameraTrans = glm::lookAt(camera.pos, camera.target, camera.up);
+  projTrans = glm::perspective(
+      perspectiveProj.fovy, 
+      perspectiveProj.aspect, 
+      perspectiveProj.zNear,
+      perspectiveProj.zFar);
     
-//    m_VPTtransformation = PersProjTrans * CameraRotateTrans * CameraTranslationTrans;
-    return VPTtransformation;
+  VPTransformation = projTrans * cameraTrans;
+
+  //for (int i = 0; i < 4; i++)
+  //  printf("%f %f %f %f\n", VPTransformation[i][0], VPTransformation[i][1], VPTransformation[i][2], VPTransformation[i][3]);
+  //      
+  //      printf("\n");
+  return VPTransformation;
 }
 
 const glm::mat4& Pipeline::getWorldTrans()
 {
-//    glm::mat4 scaleTrans, rotateTrans, translationTrans;
+  //glm::mat4 scaleTrans, rotateTrans, translationTrans;
 
-//    scaleTrans = glm::scale(glm::mat4(1.0f), scale);
-//    rotateTrans = glm::rotate(glm::mat4(1.0f), 1.0f, rotateInfo);
-//    translationTrans = glm::translate(glm::mat4(1.0f), worldPos);
+  //scaleTrans = glm::scale(glm::mat4(1.0f), scale);
+  //rotateTrans = glm::rotate(glm::mat4(1.0f), 1.0f, rotateInfo);
+  //translationTrans = glm::translate(glm::mat4(1.0f), worldPos);
 
-//    worldTransformation = translationTrans * rotateTrans * scaleTrans;
-    return worldTransformation;
+  worldTransformation = glm::mat4(1.0f);//translationTrans * rotateTrans * scaleTrans;
+
+  //      for (int i = 0; i < 4; i++)
+  //        printf("%f %f %f %f\n", worldTransformation[i][0], worldTransformation[i][1], worldTransformation[i][2], worldTransformation[i][3]);
+  //      
+  //      printf("\n");
+  return worldTransformation;
 }
 
 const glm::mat4& Pipeline::getWVPTrans()
 {
-    getWorldTrans();
-    getVPTrans();
+  getWorldTrans();
+  getVPTrans();
 
-    WVPtransformation = VPTtransformation * worldTransformation;
-    return WVPtransformation;
+  WVPtransformation = VPTransformation * worldTransformation;
+  return WVPtransformation;
 }
 
 

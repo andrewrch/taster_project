@@ -76,7 +76,7 @@ class Pipeline
     const glm::mat4& getWVPTrans();
     const glm::mat4& getWorldTrans();
 
-private:
+  private:
     glm::vec3 scale;
     glm::vec3 worldPos;
     glm::vec3 rotateInfo;
@@ -89,13 +89,13 @@ private:
     } perspectiveProj;
 
     struct {
-        glm::vec3 pos;
-        glm::vec3 target;
-        glm::vec3 up;
+      glm::vec3 pos;
+      glm::vec3 target;
+      glm::vec3 up;
     } camera;
 
     glm::mat4 WVPtransformation;
-    glm::mat4 VPTtransformation;
+    glm::mat4 VPTransformation;
     glm::mat4 worldTransformation;
 };
 

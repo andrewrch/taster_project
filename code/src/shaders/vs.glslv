@@ -3,14 +3,15 @@
 layout (location = 0) in vec3 position;
 layout (location = 1) in vec3 normal;
 layout (location = 2) in mat4 WVP;
+//layout (location = 6) in mat4 world;
     
-//out vec4 colour;
-//flat out int instanceID; 
+out vec4 colour;
+flat out int instanceID; 
 
 void main()
 {
-  gl_Position = vec4(0.5 * position.x, 0.5 * position.y, position.z, 1.0);
-//   gl_Position = vec4(position, 1.0);
-//    colour = vec4(clamp(position, 0.0, 1.0), 1.0);
-//    instanceID = gl_InstanceID;  
+  gl_Position = WVP * vec4(position, 1.0);
+  //colour = vec4(clamp(position, 0.0, 1.0), 1.0);
+  colour = vec4(1.0, 0.0, 0.0, 0.5);
+  instanceID = gl_InstanceID;  
 }
