@@ -30,16 +30,16 @@ class HandRenderer : public ICallbacks
     bool init()
     {
         // Some initial vectors for camera
-        glm::vec3 pos(100.0f, 100.0f, 0.0f);
+        glm::vec3 pos(-10.0f, 10.0f, 10.0f);
         glm::vec3 target(0.0f, 0.0f, 0.0f);
         glm::vec3 up(0.0, 1.0f, 0.0f);
 
         p.setCamera(pos, target, up);
-        p.setPerspectiveProj(50.0f, (float) WINDOW_HEIGHT/WINDOW_WIDTH, 1.0f, 100.0f);   
+        p.setPerspectiveProj(45.0f, (float) WINDOW_HEIGHT/ WINDOW_WIDTH, 1.0f, 100.0f);   
         p.setRotate(0.0f, 90.0f, 0.0f);
 
         // Get meshes initialised
-        mesh.init(1.0f, 10, 10, 1.0f, 10.0f, 10);
+        mesh.init(0.5f, 50, 50, 0.5f, 0.5f, 20);
 
         // Record time for FPS count.
         time = glutGet(GLUT_ELAPSED_TIME);
@@ -69,27 +69,28 @@ class HandRenderer : public ICallbacks
         int numCylinders = 5;
         glm::mat4 cylinderWVPs[numCylinders];
 
-        glm::mat4 wvp = p.getWVPTrans();
-        //for (int i = 0; i < 4; i++)
-        //  printf("%f %f %f %f\n", wvp[i][0], wvp[i][1], wvp[i][2], wvp[i][3]);
-        //printf("\n");
-
-        //glm::vec4 cat = wvp * glm::vec4(10, 10, 10, 1);
-
-        //printf("%f %f %f %f\n", cat[0], cat[1], cat[2], cat[3]);
-
-
         for (int i = 0; i < numSpheres; i++)
         {
+          p.setWorldPos(0, 0, i*2);
           sphereWVPs[i] = p.getWVPTrans();
         }
 
         for (int i = 0; i < numCylinders; i++)
         {
-          cylinderWVPs[i] = p.getWVPTrans();
+          p.setWorldPos(i * 2, 0, 0);
+          cylinderWVPs[i] = p.getVPTrans();
         }
-        
-        mesh.render(numSpheres, sphereWVPs, numCylinders, cylinderWVPs); 
+
+        mesh.renderCylinders(
+            numCylinders,
+            cylinderWVPs,
+            cylinderWVPs);
+
+        //mesh.renderSpheres(
+        //    numSpheres, 
+        //    sphereWVPs, 
+        //    sphereWVPs);
+
         glutSwapBuffers();
     }
 

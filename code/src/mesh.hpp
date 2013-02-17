@@ -62,7 +62,16 @@ class Mesh
         unsigned int);  // Cylinder sides
 
     // For convenience put in a single call?
-    void render(unsigned int, const glm::mat4*, unsigned int, const glm::mat4*);
+    void renderSpheres(
+        unsigned int,
+        const glm::mat4*,
+        const glm::mat4*);
+
+    void renderCylinders(
+        unsigned int,
+        const glm::mat4*,
+        const glm::mat4*);
+        
 
   private:
     // Methods to initialise the primitives used for rendering
@@ -91,10 +100,10 @@ class Mesh
 #define POS_VB       1
 #define NORMAL_VB    2
 #define WVP_MAT_VB   3
-//#define WORLD_MAT_VB 4
+#define WORLD_MAT_VB 4
 
     GLuint VAO;
-    GLuint buffers[4];
+    GLuint buffers[5];
 
     // We hold both primitives in same vertex
     // array and use BaseVertex call so require

@@ -32,27 +32,19 @@ const glm::mat4& Pipeline::getVPTrans()
     
   VPTransformation = projTrans * cameraTrans;
 
-  //for (int i = 0; i < 4; i++)
-  //  printf("%f %f %f %f\n", VPTransformation[i][0], VPTransformation[i][1], VPTransformation[i][2], VPTransformation[i][3]);
-  //      
-  //      printf("\n");
   return VPTransformation;
 }
 
 const glm::mat4& Pipeline::getWorldTrans()
 {
-  //glm::mat4 scaleTrans, rotateTrans, translationTrans;
+  glm::mat4 scaleTrans, rotateTrans, translationTrans;
 
-  //scaleTrans = glm::scale(glm::mat4(1.0f), scale);
-  //rotateTrans = glm::rotate(glm::mat4(1.0f), 1.0f, rotateInfo);
-  //translationTrans = glm::translate(glm::mat4(1.0f), worldPos);
+  // Can probably update this
+  scaleTrans = glm::scale(glm::mat4(1.0f), scale);
+  rotateTrans = glm::rotate(glm::mat4(1.0f), 1.0f, rotateInfo);
+  translationTrans = glm::translate(glm::mat4(1.0f), worldPos);
 
-  worldTransformation = glm::mat4(1.0f);//translationTrans * rotateTrans * scaleTrans;
-
-  //      for (int i = 0; i < 4; i++)
-  //        printf("%f %f %f %f\n", worldTransformation[i][0], worldTransformation[i][1], worldTransformation[i][2], worldTransformation[i][3]);
-  //      
-  //      printf("\n");
+  worldTransformation = translationTrans * rotateTrans * scaleTrans;
   return worldTransformation;
 }
 
