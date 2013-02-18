@@ -16,6 +16,7 @@
     along with this program.  If not, see <http://www.gnu.org/licenses/>.
 */
 #include <stdio.h>
+#include <assert.h>
 
 #include "pipeline.hpp"
 
@@ -39,10 +40,10 @@ const glm::mat4& Pipeline::getWorldTrans()
 {
   glm::mat4 scaleTrans, rotateTrans, translationTrans;
 
-  // Can probably update this
-  scaleTrans = glm::scale(glm::mat4(1.0f), scale);
-  rotateTrans = glm::rotate(glm::mat4(1.0f), 1.0f, rotateInfo);
-  translationTrans = glm::translate(glm::mat4(1.0f), worldPos);
+  // Can probably make this more efficient with some reading.
+  scaleTrans = glm::scale(scaleTrans, scale);
+  rotateTrans = glm::rotate(rotateTrans, 1.0f, rotateInfo);
+  translationTrans = glm::translate(translationTrans, worldPos);
 
   worldTransformation = translationTrans * rotateTrans * scaleTrans;
   return worldTransformation;
@@ -55,6 +56,30 @@ const glm::mat4& Pipeline::getWVPTrans()
 
   WVPtransformation = VPTransformation * worldTransformation;
   return WVPtransformation;
+}
+
+const glm::mat4& Pipeline::getTileTrans(unsigned int i)
+{
+  //assert(i < numTiles);
+
+  getWVPTrans();
+  
+  glm::mat4 scaleTrans, translateTrans;
+  // Tiles are row major
+  int rows, cols;
+  rows = cols = floor(sqrt(numTiles));
+  float scale = 2.0f / rows;
+  printf("Rows: %d\n", rows);
+  printf("Scale: %f\n", scale);
+  scaleTrans = glm::scale(scaleTrans, glm::vec3(scale, scale, scale));
+  printf ("x: %d, z: %d\n", i / rows, i % cols);
+  float xTrans = -1.0f + (scale * (i % cols)) + scale/2;
+  float yTrans = -1.0f + (scale * (i / rows)) + scale/2;
+  float zTrans = 0;
+  translateTrans = glm::translate(translateTrans, glm::vec3(xTrans, yTrans, zTrans));
+
+  tileTransformation = translateTrans * scaleTrans * WVPtransformation;
+  return tileTransformation;
 }
 
 

@@ -62,7 +62,6 @@ static void MouseCB(int Button, int State, int x, int y)
     s_pCallbacks->MouseCB(Button, State, x, y);
 }
 
-
 static void InitCallbacks()
 {
     glutDisplayFunc(RenderSceneCB);
@@ -73,14 +72,12 @@ static void InitCallbacks()
     glutMouseFunc(MouseCB);
 }
 
-
 void GLUTBackendInit(int argc, char** argv)
 {
     glutInit(&argc, argv);
     glutInitDisplayMode(GLUT_DOUBLE|GLUT_RGBA|GLUT_DEPTH);
     glutSetOption(GLUT_ACTION_ON_WINDOW_CLOSE, GLUT_ACTION_GLUTMAINLOOP_RETURNS);
 }
-
 
 bool GLUTBackendCreateWindow(unsigned int Width, unsigned int Height, unsigned int bpp, bool isFullScreen, const char* pTitle)
 {

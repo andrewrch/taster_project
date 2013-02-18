@@ -247,14 +247,6 @@ void Mesh::initCylinder(
 
   for (unsigned int x = 0; x < sides - 1; x++)
   {
-    //indices.push_back(x);
-    //indices.push_back(x + sides);
-    //indices.push_back(x + sides + 1);
-
-    //indices.push_back(x + sides + 1);
-    //indices.push_back(x + 1);
-    //indices.push_back(x);
-    //
     indices.push_back(x);
     indices.push_back(x + 1);
     indices.push_back(x + sides);

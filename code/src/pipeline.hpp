@@ -24,37 +24,38 @@
 class Pipeline
 {
   public:
-    Pipeline()
+    Pipeline(unsigned int t = 4)
     {
-        scale      = glm::vec3(1.0f, 1.0f, 1.0f);
-        worldPos   = glm::vec3(0.0f, 0.0f, 0.0f);
-        rotateInfo = glm::vec3(0.0f, 0.0f, 0.0f);
+      numTiles = t;     
+      scale      = glm::vec3(1.0f, 1.0f, 1.0f);
+      worldPos   = glm::vec3(0.0f, 0.0f, 0.0f);
+      rotateInfo = glm::vec3(0.0f, 0.0f, 0.0f);
     }
 
     void setScale(float scaleX, float scaleY, float scaleZ)
     {
-        scale.x = scaleX;
-        scale.y = scaleY;
-        scale.z = scaleZ;
+      scale.x = scaleX;
+      scale.y = scaleY;
+      scale.z = scaleZ;
     }
 
     void setWorldPos(float x, float y, float z)
     {
-        worldPos.x = x;
-        worldPos.y = y;
-        worldPos.z = z;
+      worldPos.x = x;
+      worldPos.y = y;
+      worldPos.z = z;
     }
     
     void setWorldPos(const glm::vec3& pos)
     {
-        worldPos = pos;
+      worldPos = pos;
     }
 
     void setRotate(float rotateX, float rotateY, float rotateZ)
     {
-        rotateInfo.x = rotateX;
-        rotateInfo.y = rotateY;
-        rotateInfo.z = rotateZ;
+      rotateInfo.x = rotateX;
+      rotateInfo.y = rotateY;
+      rotateInfo.z = rotateZ;
     }
 
     void setPerspectiveProj(float fovy, float aspect, float zNear, float zFar)
@@ -75,8 +76,11 @@ class Pipeline
     const glm::mat4& getVPTrans();
     const glm::mat4& getWVPTrans();
     const glm::mat4& getWorldTrans();
+    const glm::mat4& getTileTrans(unsigned int);
 
   private:
+    unsigned int numTiles;
+
     glm::vec3 scale;
     glm::vec3 worldPos;
     glm::vec3 rotateInfo;
@@ -97,6 +101,7 @@ class Pipeline
     glm::mat4 WVPtransformation;
     glm::mat4 VPTransformation;
     glm::mat4 worldTransformation;
+    glm::mat4 tileTransformation;
 };
 
 #endif	/* PIPELINE_H */
