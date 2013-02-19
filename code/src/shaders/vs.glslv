@@ -10,7 +10,13 @@ flat out int instanceID;
 
 void main()
 {
-  gl_Position = WVP * vec4(position, 1.0);
-  colour = vec4(clamp(position, 0.0, 1.0), 1.0);
+  vec4 projPos = WVP * vec4(position, 1.0);
+  gl_Position = projPos;
+  colour = vec4(
+    clamp(position, 0.0, 1.0), 
+  //  clamp(projPos.z, 0.0, 1.0), 
+  //  clamp(projPos.z, 0.0, 1.0), 
+  //  clamp(projPos.z, 0.0, 1.0), 
+    1.0);
   instanceID = gl_InstanceID;  
 }

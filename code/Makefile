@@ -12,6 +12,8 @@ hand_renderer: \
 	src/shader.cpp \
 	src/mesh.hpp \
 	src/mesh.cpp \
+	src/hand.hpp \
+	src/hand.cpp \
 	Makefile
 		g++ -o $@ $(filter %.cpp,$^) $(CFLAGS) 
 

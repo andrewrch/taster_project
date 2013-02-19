@@ -8,6 +8,7 @@
 #include <glm/gtc/matrix_transform.hpp>
 
 #include "pipeline.hpp"
+#include "hand.hpp"
 #include "mesh.hpp"
 #include "shader.hpp"
 #include "glut_backend.hpp"
@@ -22,7 +23,8 @@ class HandRenderer : public ICallbacks
   public:
 
     HandRenderer() :
-      p(NUM_TILES)
+      p(NUM_TILES),
+      h(p)
     {
     }
 
@@ -33,13 +35,13 @@ class HandRenderer : public ICallbacks
     bool init()
     {
         // Some initial vectors for camera
-        glm::vec3 pos(-10.0f, 0.0f, -10.0f);
+        glm::vec3 pos(0.0f, 20.0f, 10.0f);
         glm::vec3 target(0.0f, 0.0f, 0.0f);
         glm::vec3 up(0.0, 1.0f, 0.0f);
 
         p.setCamera(pos, target, up);
-        p.setPerspectiveProj(90.0f, (float) WINDOW_HEIGHT/ WINDOW_WIDTH, 1.0f, 100.0f);   
-        p.setRotate(0.0f, 90.0f, 0.0f);
+        p.setPerspectiveProj(60.0f, (float) WINDOW_HEIGHT/ WINDOW_WIDTH, 1.0f, 100.0f);   
+        //p.setRotate(0.0f, 90.0f, 0.0f);
 
         // Get meshes initialised
         mesh.init(0.5f, 50, 50, 0.5f, 1.0f, 20);
@@ -67,87 +69,33 @@ class HandRenderer : public ICallbacks
         // Clear all the GL stuff ready for rendering.
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
-        int numSpheres = 12 * NUM_TILES;
-        glm::mat4 sphereWVPs[numSpheres];
-        int numCylinders = 8 * NUM_TILES;
-        glm::mat4 cylinderWVPs[numCylinders];
+//        int numSpheres = 13 * NUM_TILES;
+        glm::mat4 sphereWVPs[HAND_SPHERES * NUM_TILES];
+//        int numCylinders = 8 * NUM_TILES;
+        glm::mat4 cylinderWVPs[HAND_CYLINDERS * NUM_TILES];
+
+        float handParams[NUM_PARAMETERS];
 
         for (int i = 0; i < NUM_TILES; i++)
         {
-          p.setScale(1, 1, 1);
-          p.setWorldPos(0, 0, 0);
-          sphereWVPs[i*12+0] = p.getTileTrans(i);
-
-          p.setWorldPos(2, 0, 0);
-          sphereWVPs[i*12+1] = p.getTileTrans(i);
-         
-          p.setWorldPos(4, 0, 0);
-          sphereWVPs[i*12+2] = p.getTileTrans(i);
-
-          p.setWorldPos(6, 0, 0);
-          sphereWVPs[i*12+3] = p.getTileTrans(i);
-
-          p.setWorldPos(0, 3, 0);
-          sphereWVPs[i*12+4] = p.getTileTrans(i);
-
-          p.setWorldPos(2, 3, 0);
-          sphereWVPs[i*12+5] = p.getTileTrans(i);
-         
-          p.setWorldPos(4, 3, 0);
-          sphereWVPs[i*12+6] = p.getTileTrans(i);
-
-          p.setWorldPos(6, 3, 0);
-          sphereWVPs[i*12+7] = p.getTileTrans(i);
-
-          p.setWorldPos(0, 6, 0);
-          sphereWVPs[i*12+8] = p.getTileTrans(i);
-
-          p.setWorldPos(2, 6, 0);
-          sphereWVPs[i*12+9] = p.getTileTrans(i);
-         
-          p.setWorldPos(4, 6, 0);
-          sphereWVPs[i*12+10] = p.getTileTrans(i);
-
-          p.setWorldPos(6, 6, 0);
-          sphereWVPs[i*12+11] = p.getTileTrans(i);
-
-
-          p.setScale(1, 3, 1);
-          p.setWorldPos(0, 0, 0);
-          cylinderWVPs[i*8+0] = p.getTileTrans(i);
-
-          p.setWorldPos(0, 3, 0);
-          cylinderWVPs[i*8+1] = p.getTileTrans(i);
-
-          p.setWorldPos(2, 0, 0);
-          cylinderWVPs[i*8+2] = p.getTileTrans(i);
-
-          p.setWorldPos(2, 3, 0);
-          cylinderWVPs[i*8+3] = p.getTileTrans(i);
-
-          p.setWorldPos(4, 0, 0);
-          cylinderWVPs[i*8+4] = p.getTileTrans(i);
-
-          p.setWorldPos(4, 3, 0);
-          cylinderWVPs[i*8+5] = p.getTileTrans(i);
-
-          p.setWorldPos(6, 0, 0);
-          cylinderWVPs[i*8+6] = p.getTileTrans(i);
-
-          p.setWorldPos(6, 3, 0);
-          cylinderWVPs[i*8+7] = p.getTileTrans(i);
+//          glm::vec3 pos(-1.0f * i, 10.0f, -1.0f * i);
+//          glm::vec3 target(0.0f, 0.0f, 0.0f);
+//          glm::vec3 up(0.0, 1.0f, 0.0f);
+//          p.setCamera(pos, target, up);
+//
+          h.initialiseHand(sphereWVPs, cylinderWVPs, i, handParams);
         }
 
 
         mesh.renderCylinders(
-            numCylinders,
+            HAND_CYLINDERS * NUM_TILES,
             cylinderWVPs,
             cylinderWVPs);
 
-        mesh.renderSpheres(
-            numSpheres, 
-            sphereWVPs, 
-            sphereWVPs);
+        //mesh.renderSpheres(
+        //    HAND_SPHERES * NUM_TILES, 
+        //    sphereWVPs, 
+        //    sphereWVPs);
 
         glutSwapBuffers();
     }
@@ -196,6 +144,7 @@ private:
     Mesh mesh;
     Shader shader;
     Pipeline p;
+    Hand h;
     int time;
     int frameCount;
     float fps;

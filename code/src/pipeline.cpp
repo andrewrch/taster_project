@@ -42,10 +42,22 @@ const glm::mat4& Pipeline::getWorldTrans()
 
   // Can probably make this more efficient with some reading.
   scaleTrans = glm::scale(scaleTrans, scale);
-  rotateTrans = glm::rotate(rotateTrans, 1.0f, rotateInfo);
+//  rotateTrans = glm::rotate(rotateTrans, 45.0f, rotateInfo);
+  rotateTrans = glm::toMat4(orientation);
   translationTrans = glm::translate(translationTrans, worldPos);
 
-  worldTransformation = translationTrans * rotateTrans * scaleTrans;
+  glm::mat4 cone(1.0f);
+  cone[0][0] = 0.7f;
+  cone[1][1] = 0.7f;
+  cone[2][2] = 1.0f;
+  cone[3][3] = 0.7f;
+  cone[3][2] = 0.3f;
+
+  //for (int i = 0; i < 4; i++)
+  //  printf("%f %f %f %f\n", cone[i][0], cone[i][1], cone[i][2], cone[i][3]);
+  //printf("\n");
+
+  worldTransformation = translationTrans * rotateTrans * scaleTrans * cone;
   return worldTransformation;
 }
 
@@ -54,8 +66,8 @@ const glm::mat4& Pipeline::getWVPTrans()
   getWorldTrans();
   getVPTrans();
 
-  WVPtransformation = VPTransformation * worldTransformation;
-  return WVPtransformation;
+  WVPTransformation = VPTransformation * worldTransformation;
+  return WVPTransformation;
 }
 
 const glm::mat4& Pipeline::getTileTrans(unsigned int i)
@@ -69,16 +81,14 @@ const glm::mat4& Pipeline::getTileTrans(unsigned int i)
   int rows, cols;
   rows = cols = floor(sqrt(numTiles));
   float scale = 2.0f / rows;
-  printf("Rows: %d\n", rows);
-  printf("Scale: %f\n", scale);
   scaleTrans = glm::scale(scaleTrans, glm::vec3(scale, scale, scale));
-  printf ("x: %d, z: %d\n", i / rows, i % cols);
+
   float xTrans = -1.0f + (scale * (i % cols)) + scale/2;
   float yTrans = -1.0f + (scale * (i / rows)) + scale/2;
   float zTrans = 0;
   translateTrans = glm::translate(translateTrans, glm::vec3(xTrans, yTrans, zTrans));
 
-  tileTransformation = translateTrans * scaleTrans * WVPtransformation;
+  tileTransformation = translateTrans * scaleTrans * VPTransformation;
   return tileTransformation;
 }
 

@@ -20,6 +20,8 @@
 
 #include <glm/glm.hpp>
 #include <glm/gtc/matrix_transform.hpp>
+#include <glm/gtx/transform2.hpp>
+#include <glm/gtx/quaternion.hpp>
 
 class Pipeline
 {
@@ -30,6 +32,7 @@ class Pipeline
       scale      = glm::vec3(1.0f, 1.0f, 1.0f);
       worldPos   = glm::vec3(0.0f, 0.0f, 0.0f);
       rotateInfo = glm::vec3(0.0f, 0.0f, 0.0f);
+
     }
 
     void setScale(float scaleX, float scaleY, float scaleZ)
@@ -56,6 +59,8 @@ class Pipeline
       rotateInfo.x = rotateX;
       rotateInfo.y = rotateY;
       rotateInfo.z = rotateZ;
+
+      orientation = glm::quat(glm::vec3(rotateX, rotateY, rotateZ));
     }
 
     void setPerspectiveProj(float fovy, float aspect, float zNear, float zFar)
@@ -85,6 +90,9 @@ class Pipeline
     glm::vec3 worldPos;
     glm::vec3 rotateInfo;
 
+    glm::quat orientation;
+
+
     struct {
       float fovy;
       float aspect;
@@ -98,7 +106,7 @@ class Pipeline
       glm::vec3 up;
     } camera;
 
-    glm::mat4 WVPtransformation;
+    glm::mat4 WVPTransformation;
     glm::mat4 VPTransformation;
     glm::mat4 worldTransformation;
     glm::mat4 tileTransformation;
