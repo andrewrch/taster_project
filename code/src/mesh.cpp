@@ -40,7 +40,6 @@ Mesh::~Mesh()
     clear();
 }
 
-
 void Mesh::clear()
 {
     if (buffers[0] != 0) {
@@ -239,7 +238,7 @@ void Mesh::initCylinder(
     for (unsigned int x = 0; x < sides; x++)  
     {
         double theta = ((double) x / (sides - 1)) * 2 * M_PI;
-        glm::vec3 p(radius * cos(theta),  height * (y - height/2), radius * sin(theta));
+        glm::vec3 p(radius * cos(theta), height * y, radius * sin(theta));
         positions.push_back(p);
         normals.push_back(glm::vec3(p.x / radius, p.y / radius, 0));
     }

@@ -14,6 +14,7 @@ hand_renderer: \
 	src/mesh.cpp \
 	src/hand.hpp \
 	src/hand.cpp \
+	src/cone.hpp \
 	Makefile
 		g++ -o $@ $(filter %.cpp,$^) $(CFLAGS) 
 

@@ -42,22 +42,15 @@ const glm::mat4& Pipeline::getWorldTrans()
 
   // Can probably make this more efficient with some reading.
   scaleTrans = glm::scale(scaleTrans, scale);
-//  rotateTrans = glm::rotate(rotateTrans, 45.0f, rotateInfo);
+  //  rotateTrans = glm::rotate(rotateTrans, 45.0f, rotateInfo);
   rotateTrans = glm::toMat4(orientation);
   translationTrans = glm::translate(translationTrans, worldPos);
-
-  glm::mat4 cone(1.0f);
-  cone[0][0] = 0.7f;
-  cone[1][1] = 0.7f;
-  cone[2][2] = 1.0f;
-  cone[3][3] = 0.7f;
-  cone[3][2] = 0.3f;
 
   //for (int i = 0; i < 4; i++)
   //  printf("%f %f %f %f\n", cone[i][0], cone[i][1], cone[i][2], cone[i][3]);
   //printf("\n");
 
-  worldTransformation = translationTrans * rotateTrans * scaleTrans * cone;
+  worldTransformation = translationTrans * rotateTrans * scaleTrans;// * cone;
   return worldTransformation;
 }
 

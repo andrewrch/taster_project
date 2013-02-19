@@ -95,7 +95,7 @@ class Mesh
     // FIXME Might only need for destructor so consider
     // moving
     void clear();
-   
+
 #define INDEX_BUFFER 0    
 #define POS_VB       1
 #define NORMAL_VB    2
@@ -103,6 +103,7 @@ class Mesh
 #define WORLD_MAT_VB 4
 
     GLuint VAO;
+    GLuint axes;
     GLuint buffers[5];
 
     // We hold both primitives in same vertex
