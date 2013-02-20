@@ -18,7 +18,7 @@
 static const unsigned int WINDOW_WIDTH = 1024;
 static const unsigned int WINDOW_HEIGHT = 1024;
 
-static const unsigned int NUM_TILES = 36;
+static const unsigned int NUM_TILES = 4;
 
 class HandRenderer : public ICallbacks
 {
@@ -37,7 +37,7 @@ class HandRenderer : public ICallbacks
     bool init()
     {
         // Some initial vectors for camera
-        glm::vec3 pos(0.0f, 0.0f, 35.0f);
+        glm::vec3 pos(0.0f, 0.0f, 95.0f);
         glm::vec3 target(0.0f, 0.0f, 0.0f);
         glm::vec3 up(0.0, 1.0f, 0.0f);
 
@@ -71,31 +71,41 @@ class HandRenderer : public ICallbacks
         // Clear all the GL stuff ready for rendering.
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
-//        int numSpheres = 13 * NUM_TILES;
+        glm::mat4 sphereWVPsTiled[HAND_SPHERES * NUM_TILES];
         glm::mat4 sphereWVPs[HAND_SPHERES * NUM_TILES];
-//        int numCylinders = 8 * NUM_TILES;
+        glm::mat4 cylinderWVPsTiled[HAND_CYLINDERS * NUM_TILES];
         glm::mat4 cylinderWVPs[HAND_CYLINDERS * NUM_TILES];
 
         float handParams[NUM_TILES][NUM_PARAMETERS];
-
         for (unsigned int i = 0; i < NUM_TILES; i++)
         {
           for (unsigned int j = 0; j < NUM_PARAMETERS; j++)
           {
+            //handParams[i][j] = (rand() - RAND_MAX / 2) % 30; 
+            handParams[i][j] = 1.0f;
+            handParams[i][THUMB_ROT_1X] = 45;
+            handParams[i][THUMB_ROT_1Z] = -45;
             // Some random params
-            handParams[i][j] = (rand() - RAND_MAX / 2) % 30; 
           }
-          h.initialiseHand(sphereWVPs, cylinderWVPs, i, handParams[i]);
+          h.initialiseHand(sphereWVPsTiled, sphereWVPs, cylinderWVPsTiled, cylinderWVPs, i, handParams[i]);
         }
+
+//        for (int i = 0; i < 4; i++)
+//          printf("%f %f %f %f\n", sphereWVPsTiled[1][i][0], sphereWVPsTiled[1][i][1], sphereWVPsTiled[1][i][2], sphereWVPsTiled[1][i][3]);
+//        printf("------------------------\n");
+//
+//        for (int i = 0; i < 4; i++)
+//          printf("%f %f %f %f\n", sphereWVPs[1][i][0], sphereWVPs[1][i][1], sphereWVPs[1][i][2], sphereWVPs[1][i][3]);
+//        printf("------------------------\n");
 
         mesh.renderCylinders(
             HAND_CYLINDERS * NUM_TILES,
-            cylinderWVPs,
+            cylinderWVPsTiled,
             cylinderWVPs);
 
         mesh.renderSpheres(
             HAND_SPHERES * NUM_TILES, 
-            sphereWVPs, 
+            sphereWVPsTiled, 
             sphereWVPs);
 
         glutSwapBuffers();

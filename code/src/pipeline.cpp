@@ -65,20 +65,18 @@ const glm::mat4& Pipeline::getWVPTrans()
 
 const glm::mat4& Pipeline::getTileTrans(unsigned int i)
 {
-  //assert(i < numTiles);
-
-  getWVPTrans();
+  getVPTrans();
   
   glm::mat4 scaleTrans, translateTrans;
   // Tiles are row major
   int rows, cols;
   rows = cols = floor(sqrt(numTiles));
   float scale = 2.0f / rows;
-  scaleTrans = glm::scale(scaleTrans, glm::vec3(scale, scale, scale));
+  scaleTrans = glm::scale(scaleTrans, glm::vec3(scale, scale, 1.0f));
 
   float xTrans = -1.0f + (scale * (i % cols)) + scale/2;
   float yTrans = -1.0f + (scale * (i / rows)) + scale/2;
-  float zTrans = 0;
+  float zTrans = -0.0f;
   translateTrans = glm::translate(translateTrans, glm::vec3(xTrans, yTrans, zTrans));
 
   tileTransformation = translateTrans * scaleTrans * VPTransformation;

@@ -14,6 +14,21 @@ Hand::~Hand()
 {
 }
 
+glm::mat4 Hand::initialiseJoint(
+    unsigned int finger,
+    unsigned int joint,
+    glm::mat4* spheres, 
+    glm::mat4* cylinders, 
+    glm::mat4* startTR,
+    unsigned int tile,
+    unsigned int* currentSphere,
+    unsigned int* currentCylinder,
+    float startRadius,
+    float startLength,
+    float params[NUM_PARAMETERS])
+
+
+
 void Hand::initialiseFinger(
     unsigned int finger,
     glm::mat4* spheres, 
@@ -26,15 +41,20 @@ void Hand::initialiseFinger(
     float startLength,
     float params[NUM_PARAMETERS])
 {
-  glm::mat4 s, t, r, c, tr;
-  glm::quat orientation;
+  glm::mat4 globalPos, tileProj, globalRot, s, t, r, c, tr;
+  glm::quat orientation, globalOrientation;
   float coneRatio, coneLength;
-  // Holds scale of current obj
-  s = glm::scale(s, glm::vec3(startRadius, startRadius, startRadius));
 
+  globalPos = glm::translate(glm::mat4(1.0f), 
+      glm::vec3(params[GLOBAL_POS_X], params[GLOBAL_POS_Y], params[GLOBAL_POS_Z]));
+  globalOrientation = glm::quat(
+      params[GLOBAL_ROT_X], params[GLOBAL_ROT_Y], params[GLOBAL_ROT_Z], params[GLOBAL_ROT_W]);
+  tileProj = p.getTileProj(tile);
+  
   // SPHERE
+  s = glm::scale(s, glm::vec3(startRadius, startRadius, startRadius));
   t = glm::translate(t, startPosition);
-  spheres[tile * HAND_SPHERES + (*currentSphere)++] = p.getTileTrans(tile) * t * s;
+  spheres[tile * HAND_SPHERES + (*currentSphere)++] = tileProj * t * s;
 
   // CYLINDER
   coneRatio = 0.95f;
@@ -48,7 +68,7 @@ void Hand::initialiseFinger(
   r = glm::toMat4(orientation);
   c = cone(coneRatio);
   tr = t * r;
-  cylinders[tile * HAND_CYLINDERS + (*currentCylinder)++] = p.getTileTrans(tile) * tr * s * c;
+  cylinders[tile * HAND_CYLINDERS + (*currentCylinder)++] = tileProj * tr * s * c;
 
   // SPHERE
   s = glm::scale(glm::mat4(1.0f), glm::vec3(
@@ -57,7 +77,8 @@ void Hand::initialiseFinger(
         coneRatio * startRadius));
   t = glm::translate(glm::mat4(1.0f), glm::vec3(0.0f, coneLength, 0.0f));
   tr = tr * t;
-  spheres[tile * HAND_SPHERES + (*currentSphere)++] = p.getTileTrans(tile) * tr * s;
+  temp = tr * s;
+  spheres[tile * HAND_SPHERES + (*currentSphere)++] = tileProj * temp;
 
   // CYLINDER
   coneLength = coneLength * 0.66f;
@@ -72,7 +93,8 @@ void Hand::initialiseFinger(
   coneRatio = coneRatio * 0.95f;
   c = cone(coneRatio);
   tr = tr * r;
-  cylinders[tile * HAND_CYLINDERS + (*currentCylinder)++] = p.getTileTrans(tile) * tr * s * c;
+  temp = tr * s * c;
+  cylinders[tile * HAND_CYLINDERS + (*currentCylinder)++] = tileProj * temp;
 
   // SPHERE
   s = glm::scale(glm::mat4(1.0f), glm::vec3(
@@ -81,11 +103,11 @@ void Hand::initialiseFinger(
         coneRatio * startRadius));
   t = glm::translate(glm::mat4(1.0f), glm::vec3(0.0f, coneLength, 0.0f));
   tr = tr * t;
-  spheres[tile * HAND_SPHERES + (*currentSphere)++] = p.getTileTrans(tile) * tr * s;
+  temp = tr * s;
+  spheres[tile * HAND_SPHERES + (*currentSphere)++] = tileProj * temp;
 
   // CYLINDER
   coneLength = coneLength * 0.66f;
-
   orientation = glm::quat(glm::vec3(
         0.0f, 
         0.0f, 
@@ -96,7 +118,8 @@ void Hand::initialiseFinger(
   coneRatio = coneRatio * 0.95f;
   c = cone(coneRatio);
   tr = tr * r;
-  cylinders[tile * HAND_CYLINDERS + (*currentCylinder)++] = p.getTileTrans(tile) * tr * s * c;
+  temp = tr * s * c;
+  cylinders[tile * HAND_CYLINDERS + (*currentCylinder)++] = tileProj * temp;
 
   // SPHERE
   s = glm::scale(glm::mat4(1.0f), glm::vec3(
@@ -105,11 +128,14 @@ void Hand::initialiseFinger(
         coneRatio * coneRatio * startRadius));
   t = glm::translate(glm::mat4(1.0f), glm::vec3(0.0f, coneLength, 0.0f));
   tr = tr * t;
-  spheres[tile * HAND_SPHERES + (*currentSphere)++] = p.getTileTrans(tile) * tr * s;
+  temp = tr * s;
+  spheres[tile * HAND_SPHERES + (*currentSphere)++] = tileProj * temp;
 }
 
 void Hand::initialiseThumb(
+    glm::mat4* spheresTiled, 
     glm::mat4* spheres, 
+    glm::mat4* cylindersTiled, 
     glm::mat4* cylinders, 
     glm::vec3 startPosition,
     unsigned int tile,
@@ -119,7 +145,8 @@ void Hand::initialiseThumb(
     float startLength,
     float params[])
 {
-  glm::mat4 r, s, it, t, tr, c;
+  glm::mat4 r, s, it, t, tr, c, temp;
+
   float coneRatio, coneLength;
   glm::quat orientation; 
   // Ball of thumb
@@ -133,13 +160,17 @@ void Hand::initialiseThumb(
   glm::gtc::quaternion::normalize(orientation);
   r = glm::toMat4(orientation);
   tr = t * r;
-  spheres[tile * HAND_SPHERES + (*currentSphere)++] = p.getTileTrans(tile) * tr * s * it;
+  temp = tr * s * it;
+  spheres[tile * HAND_SPHERES + *currentSphere] = p.getVPTrans() * temp;
+  spheresTiled[tile * HAND_SPHERES + (*currentSphere)++] = tileProj * temp;
 
   // Sphere
   t = glm::translate(glm::mat4(1.0f), glm::vec3(0.0f, 2.5f, 0.0f));
-  tr = tr * t;
   s = glm::scale(glm::mat4(1.0f), glm::vec3(startRadius, startRadius, startRadius));
-  spheres[tile * HAND_SPHERES + (*currentSphere)++] = p.getTileTrans(tile) * tr * s;
+  tr = tr * t;
+  temp = tr * s;
+  spheres[tile * HAND_SPHERES + *currentSphere] = p.getVPTrans() * temp;
+  spheresTiled[tile * HAND_SPHERES + (*currentSphere)++] = tileProj * temp;
 
   // CYLINDER
   coneLength = startLength;
@@ -153,7 +184,9 @@ void Hand::initialiseThumb(
   glm::gtc::quaternion::normalize(orientation);
   r = glm::toMat4(orientation);
   tr = tr * r;
-  cylinders[tile * HAND_CYLINDERS + (*currentCylinder)++] = p.getTileTrans(tile) * tr * s * c;
+  temp = tr * s * c;
+  cylinders[tile * HAND_CYLINDERS + *currentCylinder] = p.getVPTrans() * temp;
+  cylindersTiled[tile * HAND_CYLINDERS + (*currentCylinder)++] = tileProj * temp;
 
   // SPHERE
   s = glm::scale(glm::mat4(1.0f), glm::vec3(
@@ -162,7 +195,9 @@ void Hand::initialiseThumb(
         coneRatio * startRadius));
   t = glm::translate(glm::mat4(1.0f), glm::vec3(0.0f, coneLength, 0.0f));
   tr = tr * t;
-  spheres[tile * HAND_SPHERES + (*currentSphere)++] = p.getTileTrans(tile) * tr * s;
+  temp = tr * s;
+  spheres[tile * HAND_SPHERES + *currentSphere] = p.getVPTrans() * temp;
+  spheresTiled[tile * HAND_SPHERES + (*currentSphere)++] = tileProj * temp;
 
   //CYLINDER
   coneLength = coneLength * 0.66f;
@@ -176,7 +211,9 @@ void Hand::initialiseThumb(
   glm::gtc::quaternion::normalize(orientation);
   r = glm::toMat4(orientation);
   tr = tr * r;
-  cylinders[tile * HAND_CYLINDERS + (*currentCylinder)++] = p.getTileTrans(tile) * tr * s * c;
+  temp = tr * s * c;
+  cylinders[tile * HAND_CYLINDERS + *currentCylinder] = p.getVPTrans() * temp;
+  cylindersTiled[tile * HAND_CYLINDERS + (*currentCylinder)++] = tileProj * temp;
 
   // SPHERE
   s = glm::scale(glm::mat4(1.0f), glm::vec3(
@@ -185,11 +222,15 @@ void Hand::initialiseThumb(
         coneRatio * startRadius));
   t = glm::translate(glm::mat4(1.0f), glm::vec3(0.0f, coneLength - 0.2, 0.0f));
   tr = tr * t;
-  spheres[tile * HAND_SPHERES + (*currentSphere)++] = p.getTileTrans(tile) * tr * s;
+  temp = tr * s;
+  spheres[tile * HAND_SPHERES + *currentSphere] = p.getVPTrans() * temp;
+  spheresTiled[tile * HAND_SPHERES + (*currentSphere)++] = tileProj * temp;
 }
 
 void Hand::initialiseHand(
+    glm::mat4* spheresTiled, 
     glm::mat4* spheres, 
+    glm::mat4* cylindersTiled, 
     glm::mat4* cylinders, 
     unsigned int tile,
     float params[])
@@ -199,7 +240,9 @@ void Hand::initialiseHand(
   // First finger
   initialiseFinger(
       FINGER_1,
+      spheresTiled, 
       spheres, 
+      cylindersTiled, 
       cylinders, 
       glm::vec3(0.0, 4.0, 0.0), 
       tile, 
@@ -211,7 +254,9 @@ void Hand::initialiseHand(
   // Second finger
   initialiseFinger(
       FINGER_2,
+      spheresTiled, 
       spheres, 
+      cylindersTiled, 
       cylinders, 
       glm::vec3(1.1, 4.0, 0.0), 
       tile, 
@@ -223,7 +268,9 @@ void Hand::initialiseHand(
   // Middle finger
   initialiseFinger(
       FINGER_3,
+      spheresTiled, 
       spheres, 
+      cylindersTiled, 
       cylinders, 
       glm::vec3(2.2, 4.0, 0.0), 
       tile, 
@@ -235,7 +282,9 @@ void Hand::initialiseHand(
    // Little finger
    initialiseFinger(
       FINGER_4,
+      spheresTiled, 
       spheres, 
+      cylindersTiled, 
       cylinders, 
       glm::vec3(3.2, 4.0, 0.0), 
       tile, 
@@ -246,24 +295,32 @@ void Hand::initialiseHand(
       params);
 
   // Where fingers meet the palm
-  glm::mat4 s, t, r;
+  glm::mat4 s, t, r, temp;
   s = glm::scale(glm::mat4(1.0f), glm::vec3(4.5f, 0.5f, 1.5f));
   t = glm::translate(glm::mat4(1.0f), glm::vec3(1.5f, 4.0f, 0.0f));
-  spheres[tile * HAND_SPHERES + currentSphere++] = p.getTileTrans(tile) * t * s;
+  temp = t * s;
+  spheres[tile * HAND_SPHERES + currentSphere] = p.getVPTrans() * temp;
+  spheresTiled[tile * HAND_SPHERES + currentSphere++] = tileProj * temp;
 
   // The palm
   s = glm::scale(glm::mat4(1.0f), glm::vec3(4.5f, 4.0f, 1.5f));
   t = glm::translate(glm::mat4(1.0f), glm::vec3(1.5f, 0.0f, 0.0f));
-  cylinders[tile * HAND_CYLINDERS + currentCylinder++] = p.getTileTrans(tile) * t * s;
+  temp = t * s;
+  cylinders[tile * HAND_CYLINDERS + currentCylinder] = p.getVPTrans() * temp;
+  cylindersTiled[tile * HAND_CYLINDERS + currentCylinder++] = tileProj * temp;
 
   // The bottom of the palm
   s = glm::scale(glm::mat4(1.0f), glm::vec3(4.5f, 0.5f, 1.5f));
   t = glm::translate(glm::mat4(1.0f), glm::vec3(1.5f, 0.0f, 0.0f));
-  spheres[tile * HAND_SPHERES + currentSphere++] = p.getTileTrans(tile) * t * s;
+  temp = t * s;
+  spheres[tile * HAND_SPHERES + currentSphere] = p.getVPTrans() * temp;
+  spheresTiled[tile * HAND_SPHERES + currentSphere++] = tileProj * temp;
 
   // The thumb
   initialiseThumb(
+      spheresTiled, 
       spheres, 
+      cylindersTiled, 
       cylinders, 
       glm::vec3(3.2, 4.0, 0.0), 
       tile, 

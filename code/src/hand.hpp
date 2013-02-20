@@ -44,7 +44,11 @@ class Hand
   public:
     Hand(Pipeline&);
     ~Hand();
-    void initialiseHand(glm::mat4*, glm::mat4*, unsigned int, float[NUM_PARAMETERS]);
+    void initialiseHand(
+        glm::mat4*, 
+        glm::mat4*, 
+        unsigned int, 
+        float[NUM_PARAMETERS]);
   private:
     Pipeline& p;
     void initialiseFinger(
@@ -60,6 +64,17 @@ class Hand
         float[]);
 
     void initialiseThumb(
+        glm::mat4*, 
+        glm::mat4*, 
+        glm::vec3,
+        unsigned int, 
+        unsigned int*, 
+        unsigned int*, 
+        float,
+        float,
+        float[]);
+
+    void initialiseJoint(
         glm::mat4*, 
         glm::mat4*, 
         glm::vec3,
