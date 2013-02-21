@@ -24,7 +24,7 @@ using namespace std;
 #define POSITION_LOCATION 0
 #define NORMAL_LOCATION 1
 #define WVP_LOCATION 2
-#define WORLD_LOCATION 6
+//#define WORLD_LOCATION 6
 
 static const int NUMBER_OF_PRIMITIVES = 2;
 
@@ -85,9 +85,9 @@ bool Mesh::init(
     entries[0].numIndices = numIndices;
 
     // Reserve space in the vectors for the sphere
-    //positions.reserve(numVertices);
-    //normals.reserve(numVertices);
-    //indices.reserve(numIndices);
+    positions.reserve(numVertices);
+    normals.reserve(numVertices);
+    indices.reserve(numIndices);
 
     initSphere(
         sphereRadius, 
@@ -105,9 +105,9 @@ bool Mesh::init(
     entries[1].numIndices = numIndices;
 
     // Reserve space in the vectors for the cylinder
-    //positions.reserve(numVertices);
-    //normals.reserve(numVertices);
-    //indices.reserve(numIndices);
+    positions.reserve(numVertices);
+    normals.reserve(numVertices);
+    indices.reserve(numIndices);
 
     initCylinder(
         cylinderRadius,
@@ -161,19 +161,19 @@ bool Mesh::init(
         glVertexAttribDivisor(WVP_LOCATION + i, 1);
     }
 
-    glBindBuffer(GL_ARRAY_BUFFER, buffers[WORLD_MAT_VB]);
-    for (unsigned int i = 0; i < 4 ; i++) {
-        glEnableVertexAttribArray(WORLD_LOCATION + i);
-        glVertexAttribPointer(
-            WORLD_LOCATION + i, 
-            4, 
-            GL_FLOAT, 
-            GL_FALSE, 
-            sizeof(glm::mat4), 
-            (const GLvoid*)(sizeof(GLfloat) * i * 4));
-        glVertexAttribDivisor(WORLD_LOCATION + i, 1);
-    }
-
+//    glBindBuffer(GL_ARRAY_BUFFER, buffers[WORLD_MAT_VB]);
+//    for (unsigned int i = 0; i < 4 ; i++) {
+//        glEnableVertexAttribArray(WORLD_LOCATION + i);
+//        glVertexAttribPointer(
+//            WORLD_LOCATION + i, 
+//            4, 
+//            GL_FLOAT, 
+//            GL_FALSE, 
+//            sizeof(glm::mat4), 
+//            (const GLvoid*)(sizeof(GLfloat) * i * 4));
+//        glVertexAttribDivisor(WORLD_LOCATION + i, 1);
+//    }
+//
     // Make sure the VAO is not changed from the outside
     glBindVertexArray(0);	
     return GLCheckError();
@@ -238,7 +238,7 @@ void Mesh::initCylinder(
     for (unsigned int x = 0; x < sides; x++)  
     {
         double theta = ((double) x / (sides - 1)) * 2 * M_PI;
-        glm::vec3 p(radius * cos(theta), height * y, radius * sin(theta));
+        glm::vec3 p(radius * cos(theta), height * (y - height/2), radius * sin(theta));
         positions.push_back(p);
         normals.push_back(glm::vec3(p.x / radius, p.y / radius, 0));
     }
@@ -258,14 +258,13 @@ void Mesh::initCylinder(
 
 void Mesh::renderSpheres(
     unsigned int numSpheres, 
-    const glm::mat4* sphereWVPs, 
-    const glm::mat4* sphereWorlds)
+    const glm::mat4* sphereWVPs)
 {        
     glBindBuffer(GL_ARRAY_BUFFER, buffers[WVP_MAT_VB]);
     glBufferData(GL_ARRAY_BUFFER, sizeof(glm::mat4) * numSpheres, sphereWVPs, GL_DYNAMIC_DRAW);
 
-    glBindBuffer(GL_ARRAY_BUFFER, buffers[WORLD_MAT_VB]);
-    glBufferData(GL_ARRAY_BUFFER, sizeof(glm::mat4) * numSpheres, sphereWorlds, GL_DYNAMIC_DRAW);
+//    glBindBuffer(GL_ARRAY_BUFFER, buffers[WORLD_MAT_VB]);
+//    glBufferData(GL_ARRAY_BUFFER, sizeof(glm::mat4) * numSpheres, sphereWorlds, GL_DYNAMIC_DRAW);
 
     glBindVertexArray(VAO);
 		glDrawElementsInstancedBaseVertex(GL_TRIANGLES, 
@@ -280,14 +279,13 @@ void Mesh::renderSpheres(
 
 void Mesh::renderCylinders(
     unsigned int numCylinders, 
-    const glm::mat4* cylinderWVPs,
-    const glm::mat4* cylinderWorlds)
+    const glm::mat4* cylinderWVPs)
 {        
     glBindBuffer(GL_ARRAY_BUFFER, buffers[WVP_MAT_VB]);
     glBufferData(GL_ARRAY_BUFFER, sizeof(glm::mat4) * numCylinders, cylinderWVPs, GL_DYNAMIC_DRAW);
 
-    glBindBuffer(GL_ARRAY_BUFFER, buffers[WORLD_MAT_VB]);
-    glBufferData(GL_ARRAY_BUFFER, sizeof(glm::mat4) * numCylinders, cylinderWorlds, GL_DYNAMIC_DRAW);
+//    glBindBuffer(GL_ARRAY_BUFFER, buffers[WORLD_MAT_VB]);
+//    glBufferData(GL_ARRAY_BUFFER, sizeof(glm::mat4) * numCylinders, cylinderWorlds, GL_DYNAMIC_DRAW);
 
     glBindVertexArray(VAO);
 		glDrawElementsInstancedBaseVertex(GL_TRIANGLES,

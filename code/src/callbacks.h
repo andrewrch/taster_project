@@ -32,6 +32,8 @@ public:
     virtual void RenderSceneCB() = 0;
 
     virtual void IdleCB() = 0;
+
+    virtual void TimerCB(int value) = 0;
     
     virtual void MouseCB(int Button, int State, int x, int y) = 0;
 };
