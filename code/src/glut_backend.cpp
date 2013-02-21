@@ -65,14 +65,14 @@ static void MouseCB(int Button, int State, int x, int y)
 static void TimerCB(int value)
 {
     s_pCallbacks->TimerCB(value);
-    glutTimerFunc(1000, TimerCB, 1);
+    glutTimerFunc(5000, TimerCB, 1);
 }
 
 static void InitCallbacks()
 {
     glutDisplayFunc(RenderSceneCB);
-    //glutIdleFunc(IdleCB);
-    glutTimerFunc(1000, TimerCB, 1);
+    glutIdleFunc(IdleCB);
+    glutTimerFunc(5000, TimerCB, 1);
     glutSpecialFunc(SpecialKeyboardCB);
     glutPassiveMotionFunc(PassiveMouseCB);
     glutKeyboardFunc(KeyboardCB);
@@ -118,9 +118,12 @@ void GLUTBackendRun(ICallbacks* pCallbacks)
 
     glClearColor(0.0f, 0.0f, 0.0f, 0.0f);
     glFrontFace(GL_CW);
-    //glCullFace(GL_BACK);
-    //glEnable(GL_CULL_FACE);
+    glCullFace(GL_BACK);
+    glEnable(GL_CULL_FACE);
     glEnable(GL_DEPTH_TEST);
+    glEnable(GL_BLEND);
+    glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+
 
     s_pCallbacks = pCallbacks;
     InitCallbacks();

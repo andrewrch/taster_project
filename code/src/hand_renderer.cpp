@@ -18,7 +18,7 @@
 static const unsigned int WINDOW_WIDTH = 1024;
 static const unsigned int WINDOW_HEIGHT = 1024;
 
-static const unsigned int NUM_TILES = 169;
+static const unsigned int NUM_TILES = 25;
 
 class HandRenderer : public ICallbacks
 {
@@ -55,6 +55,7 @@ class HandRenderer : public ICallbacks
         // Compile and then link the shaders
         shader.createAndLinkProgram();
         shader.use();
+
         return true;
     }
 
@@ -78,8 +79,8 @@ class HandRenderer : public ICallbacks
         {
           for (unsigned int j = 0; j < NUM_PARAMETERS; j++)
           {
-            //handParams[i][j] = (rand() - RAND_MAX / 2) % 60; 
-            handParams[i][j] = 0.0f;
+            handParams[i][j] = (rand() - RAND_MAX / 2) % 60; 
+            //handParams[i][j] = 0.0f;
 //            handParams[i][THUMB_ROT_1X] = 45;
 //            handParams[i][THUMB_ROT_1Z] = -45;
             // Some random params
@@ -89,17 +90,24 @@ class HandRenderer : public ICallbacks
           //h.initialiseHand(sphereWVPsTiled, sphereWVPs, cylinderWVPsTiled, cylinderWVPs, i, handParams[i]);
         }
 
-//        for (int i = 0; i < 4; i++)
-//          printf("%f %f %f %f\n", sphereWVPsTiled[1][i][0], sphereWVPsTiled[1][i][1], sphereWVPsTiled[1][i][2], sphereWVPsTiled[1][i][3]);
-//        printf("------------------------\n");
-//
-//        for (int i = 0; i < 4; i++)
-//          printf("%f %f %f %f\n", sphereWVPs[1][i][0], sphereWVPs[1][i][1], sphereWVPs[1][i][2], sphereWVPs[1][i][3]);
-//        printf("------------------------\n");
+        // Add uniforms
+        GLuint thLocation = shader.addUniform("tileHeight");
+        glUniform1f(thLocation, 1./sqrt(NUM_TILES));
+        GLuint twLocation = shader.addUniform("tileWidth");
+        glUniform1f(twLocation, 1./sqrt(NUM_TILES));
+
+        GLuint ntxLocation = shader.addUniform("numTilesX");
+        glUniform1ui(ntxLocation, (unsigned int) sqrt(NUM_TILES));
+        GLuint ntyLocation = shader.addUniform("numTilesY");
+        glUniform1ui(ntyLocation, (unsigned int) sqrt(NUM_TILES));
+        GLuint npLocation = shader.addUniform("numPrimitives");
+        glUniform1ui(npLocation, NUM_CYLINDERS);
 
         mesh.renderCylinders(
             NUM_CYLINDERS * NUM_TILES,
             cylinderWVPs);
+
+        glUniform1ui(npLocation, NUM_SPHERES);
 
         mesh.renderSpheres(
             NUM_SPHERES * NUM_TILES, 

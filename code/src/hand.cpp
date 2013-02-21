@@ -62,7 +62,7 @@ void Hand::initialiseHand(float params[NUM_PARAMETERS])
 {
   // Global position from params
   glm::mat4 pos = glm::translate(glm::mat4(1.0f),
-      glm::vec3(params[GLOBAL_POS_X]/30, params[GLOBAL_POS_Y]/30, params[GLOBAL_POS_Z]/30));
+      glm::vec3(params[GLOBAL_POS_X]/3, params[GLOBAL_POS_Y]/3, params[GLOBAL_POS_Z]/10));
   // Global rotation from params
   //glm::quat orientation(glm::vec3(
   //    glm::radians(params[GLOBAL_ROT_X]),
@@ -71,9 +71,9 @@ void Hand::initialiseHand(float params[NUM_PARAMETERS])
   //    params[GLOBAL_ROT_W]);
 
   glm::quat orientation(glm::vec3(
-      glm::radians(-90.0),
-      glm::radians(90.0),
-      glm::radians(0)));
+      glm::radians(0.0),
+      glm::radians(0.0),
+      glm::radians(0.0)));
   // Always normalise before converting to transformation matrix
   //orientation = glm::quat(glm::vec3(glm::radians(45), 0, glm::radians(45)));
   glm::gtc::quaternion::normalize(orientation);

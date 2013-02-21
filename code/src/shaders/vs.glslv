@@ -6,6 +6,7 @@ layout (location = 2) in mat4 WVP;
     
 out vec4 projPos;
 out vec4 colour;
+out int draw;
 flat out int instanceID; 
 
 void main()
