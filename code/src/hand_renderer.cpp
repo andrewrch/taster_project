@@ -18,7 +18,7 @@
 static const unsigned int WINDOW_WIDTH = 1024;
 static const unsigned int WINDOW_HEIGHT = 1024;
 
-static const unsigned int NUM_TILES = 25;
+static const unsigned int NUM_TILES = 1;
 
 class HandRenderer : public ICallbacks
 {
@@ -36,12 +36,12 @@ class HandRenderer : public ICallbacks
     bool init()
     {
         // Some initial vectors for camera
-        glm::vec3 pos(0.0f, 0.0f, 65.0f);
+        glm::vec3 pos(30.0f, 30.0f, 65.0f);
         glm::vec3 target(0.0f, 0.0f, 0.0f);
         glm::vec3 up(0.0, 1.0f, 0.0f);
 
         p.setCamera(pos, target, up);
-        p.setPerspectiveProj(60.0f, (float) WINDOW_HEIGHT/ WINDOW_WIDTH, 1.0f, 100.0f);   
+        p.setPerspectiveProj(45.6f, (float) WINDOW_HEIGHT/ WINDOW_WIDTH, 1.0f, 100.0f);   
         //p.setRotate(0.0f, 90.0f, 0.0f);
 
         // Get meshes initialised
@@ -79,7 +79,7 @@ class HandRenderer : public ICallbacks
         {
           for (unsigned int j = 0; j < NUM_PARAMETERS; j++)
           {
-            handParams[i][j] = (rand() - RAND_MAX / 2) % 60; 
+            handParams[i][j] = (rand() - RAND_MAX / 2) % 10; 
             //handParams[i][j] = 0.0f;
 //            handParams[i][THUMB_ROT_1X] = 45;
 //            handParams[i][THUMB_ROT_1Z] = -45;

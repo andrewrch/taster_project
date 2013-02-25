@@ -32,9 +32,11 @@ void main()
   {
     float z = (projPos.z/projPos.w + 1.0f) / 2.0f;
     float n = 1.0f; // camera z near
-    float f = 100.0f; // camera z far
+    float f = 535.0f; // camera z far
     float z_e = (n * z) / ( f - z * (f - n) );
-    fragColour = vec4(1 - z_e, 1 - z_e, 1 - z_e, 1.0); //colour;
+    fragColour = vec4(z_e, z_e, z_e, 1.0); //colour;
   }
+
+  fragColour = colour;
 
 }
