@@ -32,30 +32,25 @@ static void SpecialKeyboardCB(int Key, int x, int y)
     s_pCallbacks->SpecialKeyboardCB(Key, x, y);
 }
 
-
 static void KeyboardCB(unsigned char Key, int x, int y)
 {
     s_pCallbacks->KeyboardCB(Key, x, y);
 }
-
 
 static void PassiveMouseCB(int x, int y)
 {
     s_pCallbacks->PassiveMouseCB(x, y);
 }
 
-
 static void RenderSceneCB()
 {
     s_pCallbacks->RenderSceneCB();
 }
 
-
 static void IdleCB()
 {
     s_pCallbacks->IdleCB();
 }
-
 
 static void MouseCB(int Button, int State, int x, int y)
 {
@@ -71,7 +66,7 @@ static void TimerCB(int value)
 static void InitCallbacks()
 {
     glutDisplayFunc(RenderSceneCB);
-    //glutIdleFunc(IdleCB);
+    glutIdleFunc(IdleCB);
     glutTimerFunc(2000, TimerCB, 1);
     glutSpecialFunc(SpecialKeyboardCB);
     glutPassiveMotionFunc(PassiveMouseCB);

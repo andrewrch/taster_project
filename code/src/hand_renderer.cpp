@@ -14,21 +14,29 @@
 #include "mesh.hpp"
 #include "shader.hpp"
 #include "glut_backend.hpp"
+#include "opencv2/opencv.hpp"
+
+#include "histogram.hpp"
+#include "thresholder.hpp"
+#include "classifier.hpp"
 
 static const unsigned int WINDOW_WIDTH = 1024;
 static const unsigned int WINDOW_HEIGHT = 1024;
-
 static const unsigned int NUM_TILES = 1;
+
+using namespace std;
 
 class HandRenderer : public ICallbacks
 {
   public:
 
-    HandRenderer() :
-      p(NUM_TILES)
+    HandRenderer(string skinFilename, string nonSkinFilename) :
+      p(NUM_TILES),
+      skinHist(skinFilename),
+      nonSkinHist(nonSkinFilename),
+      classifier(skinHist, nonSkinHist)
     {
     }
-
     ~HandRenderer()
     {
     }    
@@ -42,19 +50,19 @@ class HandRenderer : public ICallbacks
 
         p.setCamera(pos, target, up);
         p.setPerspectiveProj(45.6f, (float) WINDOW_HEIGHT/ WINDOW_WIDTH, 1.0f, 100.0f);   
-        //p.setRotate(0.0f, 90.0f, 0.0f);
 
         // Get meshes initialised
         mesh.init(0.5f, 50, 50, 0.5f, 1.0f, 20);
 
-        // Record time for FPS count.
-        //time = glutGet(GLUT_ELAPSED_TIME);
         // Load shaders from file
         shader.loadFromFile(GL_VERTEX_SHADER, "./src/shaders/vs.glslv");
         shader.loadFromFile(GL_FRAGMENT_SHADER, "./src/shaders/fs.glslf");
         // Compile and then link the shaders
         shader.createAndLinkProgram();
         shader.use();
+
+        // Open the kinect up
+        capture = cv::VideoCapture(CV_CAP_OPENNI);
 
         return true;
     }
@@ -66,8 +74,7 @@ class HandRenderer : public ICallbacks
     
     virtual void RenderSceneCB()
     {   
-        //calcFPS();
-        
+
         // Clear all the GL stuff ready for rendering.
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
@@ -80,14 +87,10 @@ class HandRenderer : public ICallbacks
           for (unsigned int j = 0; j < NUM_PARAMETERS; j++)
           {
             handParams[i][j] = (rand() - RAND_MAX / 2) % 10; 
-            //handParams[i][j] = 0.0f;
-//            handParams[i][THUMB_ROT_1X] = 45;
-//            handParams[i][THUMB_ROT_1Z] = -45;
-            // Some random params
           }
+
           Hand h(handParams[i]);
           h.addToTileArrays(sphereWVPs, cylinderWVPs, i, p);
-          //h.initialiseHand(sphereWVPsTiled, sphereWVPs, cylinderWVPsTiled, cylinderWVPs, i, handParams[i]);
         }
 
         // Add uniforms
@@ -95,7 +98,6 @@ class HandRenderer : public ICallbacks
         glUniform1f(thLocation, 1./sqrt(NUM_TILES));
         GLuint twLocation = shader.addUniform("tileWidth");
         glUniform1f(twLocation, 1./sqrt(NUM_TILES));
-
         GLuint ntxLocation = shader.addUniform("numTilesX");
         glUniform1ui(ntxLocation, (unsigned int) sqrt(NUM_TILES));
         GLuint ntyLocation = shader.addUniform("numTilesY");
@@ -118,6 +120,24 @@ class HandRenderer : public ICallbacks
 
     virtual void IdleCB()
     {
+      cv::Mat depthMap;
+      cv::Mat bgrImage;
+      capture.grab();
+      capture.retrieve( depthMap, CV_CAP_OPENNI_DEPTH_MAP );
+      capture.retrieve( bgrImage, CV_CAP_OPENNI_BGR_IMAGE );
+
+      cv::Mat yuvImage;
+      cv::cvtColor(bgrImage, yuvImage, CV_BGR2YCrCb);
+
+      cv::Mat prob = classifier.classifyImage(yuvImage);
+//      cv::Mat prob = classifyImage(bgrImage 
+      //cv::imshow("Depth image", depthMap);
+      //cv::imshow("rgb image", bgrImage);
+
+
+      // First read image from kinect
+      
+      // Then find 
         RenderSceneCB();
     }
 
@@ -126,9 +146,6 @@ class HandRenderer : public ICallbacks
         RenderSceneCB();
     }
 
-    virtual void SpecialKeyboardCB(int Key, int x, int y)
-    {
-    }
 
     virtual void KeyboardCB(unsigned char Key, int x, int y)
     {
@@ -139,35 +156,20 @@ class HandRenderer : public ICallbacks
         }
     }
 
-    virtual void PassiveMouseCB(int x, int y)
-    {
-    }
-    
-    virtual void MouseCB(int Button, int State, int x, int y)
-    {
-    }
+    virtual void PassiveMouseCB(int x, int y) {}
+    virtual void MouseCB(int Button, int State, int x, int y) {}
+    virtual void SpecialKeyboardCB(int Key, int x, int y) {}
 
 private:
-    
-    void calcFPS()
-    {
-        frameCount++;
-        
-//        int time = glutGet( GLUT_ELAPSED_TIME );
-
-//        if (time - this->time > 1000) {
-//            this->fps = (float) this->frameCount * 1000.0f / (time - this->time);
-//            this->time = time;
-//            this->frameCount = 0;
-//        }
-    }
-    
     Mesh mesh;
     Shader shader;
     Pipeline p;
-//    int time;
-    int frameCount;
-    float fps;
+    cv::VideoCapture capture;
+    Histogram skinHist, nonSkinHist;
+    Classifier classifier;
+
+    unsigned int width, height, numTiles;
+    GLuint imageTexture;
 };
 
 int main(int argc, char** argv)
@@ -178,7 +180,7 @@ int main(int argc, char** argv)
         return 1;
     }
     
-    HandRenderer* app = new HandRenderer();
+    HandRenderer* app = new HandRenderer(argv[1], argv[2]);
 
     if (!app->init()) {
         return 1;
