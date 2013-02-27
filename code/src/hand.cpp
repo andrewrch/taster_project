@@ -6,10 +6,10 @@
 #include "hand.hpp"
 #include "cone.hpp"
 
-const float Hand::diameters[] = {1.0, 1.0, 1.0, 0.8, 1.2};
-const float Hand::lengths[] = {2.0, 2.2, 2.0, 1.5, 1.5};
+const double Hand::diameters[] = {1.0, 1.0, 1.0, 0.8, 1.2};
+const double Hand::lengths[] = {2.0, 2.2, 2.0, 1.5, 1.5};
 
-Hand::Hand(float params[NUM_PARAMETERS]) :
+Hand::Hand(double params[NUM_PARAMETERS]) :
   // Initialise vectors with 0 length for push_back
   sphereWVPs(0),
   cylinderWVPs(0)
@@ -58,17 +58,30 @@ void Hand::addToTileArrays(
     cylinders[tile * NUM_CYLINDERS + i] = t * cylinderWVPs[i];
 }
 
-void Hand::initialiseHand(float params[NUM_PARAMETERS])
+void Hand::addToArrays(
+    glm::mat4* spheres,
+    glm::mat4* cylinders,
+    Pipeline& p)
+{
+  glm::mat4 t = p.getVPTrans();
+  for (unsigned int i = 0; i < NUM_SPHERES; i++)
+    spheres[i] = t * sphereWVPs[i];
+
+  for (unsigned int i = 0; i < NUM_CYLINDERS; i++)
+    cylinders[i] = t * cylinderWVPs[i];
+}
+
+void Hand::initialiseHand(double params[NUM_PARAMETERS])
 {
   // Global position from params
   glm::mat4 pos = glm::translate(glm::mat4(1.0f),
-      glm::vec3(params[GLOBAL_POS_X]/30, params[GLOBAL_POS_Y]/30, params[GLOBAL_POS_Z]/10));
+      glm::vec3(params[GLOBAL_POS_X], params[GLOBAL_POS_Y], params[GLOBAL_POS_Z]));
   // Global rotation from params
-  glm::quat orientation(glm::vec3(
-      glm::radians(params[GLOBAL_ROT_X]),
-      glm::radians(params[GLOBAL_ROT_Y]),
-      glm::radians(params[GLOBAL_ROT_Z])));
-  //    params[GLOBAL_ROT_W]);
+  glm::quat orientation(
+      params[GLOBAL_ROT_X],
+      params[GLOBAL_ROT_Y],
+      params[GLOBAL_ROT_Z],
+      params[GLOBAL_ROT_W]);
 
   //glm::quat orientation(glm::vec3(
   //    glm::radians(0.0),
@@ -103,11 +116,11 @@ void Hand::initialiseHand(float params[NUM_PARAMETERS])
 
 glm::mat4 Hand::initialiseJoint(
     glm::mat4 start,
-    float xRot,
-    float zRot,
-    float diameter,
-    float length,
-    float coneRatio)
+    double xRot,
+    double zRot,
+    double diameter,
+    double length,
+    double coneRatio)
 {
   // Store current rotation and translation
   glm::mat4 current, c, r, s, t;
@@ -138,12 +151,12 @@ glm::mat4 Hand::initialiseJoint(
 void Hand::initialiseFinger(
     Digit finger,
     glm::mat4 start,
-    float params[NUM_PARAMETERS])
+    double params[NUM_PARAMETERS])
 {
-  float coneRatio = 0.95;
-  float lengthUpdate = 0.66;
-  float diameter = diameters[finger];
-  float length = lengths[finger];
+  double coneRatio = 0.95;
+  double lengthUpdate = 0.66;
+  double diameter = diameters[finger];
+  double length = lengths[finger];
 
   glm::mat4 s, t, r, c, current;
   // Where finger joins the palm
@@ -202,14 +215,14 @@ void Hand::initialisePalm(glm::mat4 start)
 
 void Hand::initialiseThumb(
     glm::mat4 start,
-    float params[])
+    double params[])
 {
   glm::mat4 r, s, it, t, current;
 
-  float coneRatio = 0.95;
-  float lengthUpdate = 0.66;
-  float diameter = diameters[THUMB];
-  float length = lengths[THUMB];
+  double coneRatio = 0.95;
+  double lengthUpdate = 0.66;
+  double diameter = diameters[THUMB];
+  double length = lengths[THUMB];
   // Ball of thumb
   s = glm::scale(glm::mat4(1.0f), glm::vec3(2.0f, 3.0f, 1.5f));
   t = glm::translate(glm::mat4(1.0f), glm::vec3(0.5f, 0.0f, -0.6f));

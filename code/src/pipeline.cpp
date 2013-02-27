@@ -69,13 +69,14 @@ const glm::mat4& Pipeline::getTileTrans(unsigned int i)
   
   glm::mat4 scaleTrans, translateTrans;
   // Tiles are row major
-  int rows, cols;
-  rows = cols = floor(sqrt(numTiles));
-  float scale = 2.0f / rows;
-  scaleTrans = glm::scale(scaleTrans, glm::vec3(scale, scale, 1.0f));
+  int rows = numTiles / 4;
+  int cols = numTiles / 3;
+  float scaleX = 2.0f / cols;
+  float scaleY = 2.0f / rows;
 
-  float xTrans = -1.0f + (scale * (i % cols)) + scale/2;
-  float yTrans = -1.0f + (scale * (i / rows)) + scale/2;
+  scaleTrans = glm::scale(scaleTrans, glm::vec3(scaleX, scaleY, 1.0f));
+  float xTrans = -1.0f + (scaleX * (i % cols)) + scaleX/2;
+  float yTrans = -1.0f + (scaleY * (i / cols)) + scaleY/2;
   float zTrans = -0.0f;
   translateTrans = glm::translate(translateTrans, glm::vec3(xTrans, yTrans, zTrans));
 

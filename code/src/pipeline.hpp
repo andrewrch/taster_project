@@ -26,9 +26,11 @@
 class Pipeline
 {
   public:
-    Pipeline(unsigned int t = 4)
+    Pipeline(unsigned int w, unsigned int h, unsigned int t = 4) :
+      width(w),
+      height(h),
+      numTiles(t)
     {
-      numTiles = t;     
       scale      = glm::vec3(1.0f, 1.0f, 1.0f);
       worldPos   = glm::vec3(0.0f, 0.0f, 0.0f);
       rotateInfo = glm::vec3(0.0f, 0.0f, 0.0f);
@@ -84,6 +86,8 @@ class Pipeline
     const glm::mat4& getTileTrans(unsigned int);
 
   private:
+    unsigned int width;
+    unsigned int height;
     unsigned int numTiles;
 
     glm::vec3 scale;

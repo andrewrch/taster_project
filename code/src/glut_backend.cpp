@@ -67,7 +67,7 @@ static void InitCallbacks()
 {
     glutDisplayFunc(RenderSceneCB);
     glutIdleFunc(IdleCB);
-    glutTimerFunc(2000, TimerCB, 1);
+    //glutTimerFunc(2000, TimerCB, 1);
     glutSpecialFunc(SpecialKeyboardCB);
     glutPassiveMotionFunc(PassiveMouseCB);
     glutKeyboardFunc(KeyboardCB);

@@ -14,13 +14,18 @@ static const unsigned int NUM_PARAMETERS = 27;
 class Hand
 {
   public:
-    Hand(float[NUM_PARAMETERS]);
+    Hand(double[NUM_PARAMETERS]);
     // Push this hand into arrays for instanced rendering
     void addToTileArrays(
         glm::mat4*,         // Spheres
         glm::mat4*,         // Cylinders
         unsigned int,       // Tile number
         Pipeline&);          // Pipeline for (Tile)VP info
+
+    void addToArrays(
+        glm::mat4*,         // Spheres
+        glm::mat4*,         // Cylinders
+        Pipeline&);         // Pipeline for VP info
 
     ~Hand();
   private:
@@ -32,7 +37,7 @@ class Hand
       THUMB = 4};
 
     // Called from constructor
-    void initialiseHand(float[NUM_PARAMETERS]);
+    void initialiseHand(double[NUM_PARAMETERS]);
 
     void initialisePalm(
         glm::mat4           // Position
@@ -41,19 +46,19 @@ class Hand
     void initialiseFinger(
         Digit,              // Which finger?
         glm::mat4,          // start position of finger
-        float[NUM_PARAMETERS]); // Parameters
+        double[NUM_PARAMETERS]); // Parameters
 
     void initialiseThumb(
         glm::mat4,
-        float[NUM_PARAMETERS]);
+        double[NUM_PARAMETERS]);
 
     glm::mat4 initialiseJoint(
         glm::mat4,          // The current WVP state
-        float,              // X rotation
-        float,              // Z rotation
-        float,              // Initial diameter
-        float,              // Initial length
-        float);             // Cone ratio
+        double,              // X rotation
+        double,              // Z rotation
+        double,              // Initial diameter
+        double,              // Initial length
+        double);             // Cone ratio
 
     // These hold WVP information for each primitive
     // in the hand
@@ -90,8 +95,8 @@ class Hand
     const static unsigned int ROT_2Z = 2;
     const static unsigned int ROT_3Z = 3;
 
-    const static float diameters[5];
-    const static float lengths[5];
+    const static double diameters[5];
+    const static double lengths[5];
 };
 
 #endif

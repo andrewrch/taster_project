@@ -28,6 +28,10 @@ hand_renderer:\
 	src/shader.hpp\
 	src/thresholder.cpp\
 	src/thresholder.hpp\
+	src/particle.cpp\
+	src/particle.hpp\
+	src/particleswarm.hpp\
+	src/particleswarm.cpp\
 	src/util.h\
 	Makefile
 		g++ -o $@ $(filter %.cpp,$^) $(CFLAGS) $(LDFLAGS)
