@@ -1,7 +1,7 @@
 CFLAGS := -g -Wall
 LDFLAGS := -lm -lGL -lGLEW -lglut `pkg-config opencv --libs` 
 
-all: hand_renderer kinect_viewer
+all: hand_renderer kinect_viewer model_viewer
 
 hand_renderer:\
 	src/blob.hpp\
@@ -67,24 +67,21 @@ kinect_viewer:\
 	Makefile
 		g++ -o $@ $(filter %.cpp,$^) $(CFLAGS) $(LDFLAGS)
 
-# model_viewer: \
-# 	src/model_viewer.cpp \
-# 	src/glut_backend.hpp \
-# 	src/glut_backend.cpp \
-# 	src/pipeline.hpp \
-# 	src/pipeline.cpp \
-# 	src/shader.hpp \
-# 	src/shader.cpp \
-# 	src/mesh.hpp \
-# 	src/mesh.cpp \
-# 	src/hand.hpp \
-# 	src/hand.cpp \
-# 	src/cone.hpp \
-# 	Makefile
-# 		g++ -o $@ $(filter %.cpp,$^) $(CFLAGS) 
-# 
-# 
-# 
+model_viewer:\
+ 	src/model_viewer.cpp \
+ 	src/glut_backend.hpp \
+ 	src/glut_backend.cpp \
+ 	src/pipeline.hpp \
+ 	src/pipeline.cpp \
+ 	src/shader.hpp \
+ 	src/shader.cpp \
+ 	src/mesh.hpp \
+ 	src/mesh.cpp \
+ 	src/hand.hpp \
+ 	src/hand.cpp \
+ 	src/cone.hpp \
+ 	Makefile
+		g++ -o $@ $(filter %.cpp,$^) $(CFLAGS) $(LDFLAGS) 
 
 clean:
-		rm -rf *o hand_renderer
+		rm -rf *o hand_renderer kinect_viewer model_viewer

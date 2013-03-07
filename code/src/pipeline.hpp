@@ -80,6 +80,8 @@ class Pipeline
         camera.up = up;
     }
 
+    void setTiles(unsigned int tiles) { numTiles = tiles; }
+
     const glm::mat4& getVPTrans();
     const glm::mat4& getWVPTrans();
     const glm::mat4& getWorldTrans();

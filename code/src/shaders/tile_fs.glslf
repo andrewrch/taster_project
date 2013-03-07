@@ -5,11 +5,9 @@ in vec4 colour;
 in vec4 projPos;
 out vec4 fragColour;
 
-uniform float tileHeight;
-uniform float tileWidth;
+uniform float tileSize;
 uniform unsigned int numPrimitives;
-uniform unsigned int numTilesX;
-uniform unsigned int numTilesY;
+uniform unsigned int tilesPerRow;
 
 void main()
 {
@@ -18,12 +16,12 @@ void main()
   float x = ((projPos.x/projPos.w) + 1.0) / 2.0;
   float y = ((projPos.y/projPos.w) + 1.0) / 2.0;
 
-  unsigned int tileY = tile / numTilesX;
-  unsigned int tileX = tile % numTilesX;
+  unsigned int tileY = tile / tilesPerRow;
+  unsigned int tileX = tile % tilesPerRow;
 
   // Clip the hands if they are outside of the tile
-  if (x < (float(tileX) * tileWidth) || y < (float(tileY) * tileHeight) ||
-      x > (float(tileX+1) * tileWidth) || y > (float(tileY+1) * tileHeight))
+  if (x < (tileX * tileSize) || y < (tileY * tileSize) ||
+      x > ((tileX+1) * tileSize) || y > ((tileY+1) * tileSize))
   {
     fragColour = vec4(1.0, 0.0, 0.0, 0.0);
   }
@@ -31,12 +29,12 @@ void main()
   else
   {
     float z = (projPos.z/projPos.w + 1.0f) / 2.0f;
-    float n = 1.0f; // camera z near
-    float f = 535.0f; // camera z far
-    float z_e = (n * z) / ( f - z * (f - n) );
-    fragColour = vec4(z_e, z_e, z_e, 1.0); //colour;
+    //float n = 40.0f; // camera z near
+    //float f = 1000.0f; // camera z far
+    //float z_e = (n * z) / ( f - z * (f - n) );
+    //fragColour = vec4(z_e, z_e, z_e, 1.0); //colour;
+    //
+    // Use raw nonlinear depth like the Kinect.
+    fragColour = vec4(z, z, z, 1.0); //colour;
   }
-
-  fragColour = colour;
-
 }

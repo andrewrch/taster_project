@@ -13,7 +13,7 @@ ParticleSwarm::ParticleSwarm(
   particles(0, Particle(parameters, c1, c2))
 {
   particles.reserve(numParticles);
-  for (int i = 0; i < numParticles; i++)
+  for (unsigned int i = 0; i < numParticles; i++)
     particles.push_back(Particle(parameters, c1, c2));
 }
 

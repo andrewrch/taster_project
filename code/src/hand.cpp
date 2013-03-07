@@ -83,13 +83,8 @@ void Hand::initialiseHand(double params[NUM_PARAMETERS])
       params[GLOBAL_ROT_Z],
       params[GLOBAL_ROT_W]);
 
-  //glm::quat orientation(glm::vec3(
-  //    glm::radians(0.0),
-  //    glm::radians(0.0),
-  //    glm::radians(0.0)));
   // Always normalise before converting to transformation matrix
-  //orientation = glm::quat(glm::vec3(glm::radians(45), 0, glm::radians(45)));
-  glm::gtc::quaternion::normalize(orientation);
+  orientation = glm::gtc::quaternion::normalize(orientation);
   glm::mat4 rot = glm::toMat4(orientation);
 
   // This is the global position and location to apply to all
@@ -129,7 +124,11 @@ glm::mat4 Hand::initialiseJoint(
   s = glm::scale(glm::mat4(1.0f), glm::vec3(diameter, length, diameter));
   // Shift because cylinder doesn't start at origin
   t = glm::translate(glm::mat4(1.0f), glm::vec3(0.0f, length/2, 0.0f));
-  glm::quat o(glm::vec3(glm::radians(xRot), 0.0f, glm::radians(zRot)));
+  if (zRot < 0) zRot = 0;
+  if (xRot > 40) xRot = 40;
+  else if (xRot < -40) xRot = -40;
+
+  glm::quat o(glm::vec3(glm::radians(zRot), 0.0f, glm::radians(xRot)));
   glm::gtc::quaternion::normalize(o);
   r = glm::toMat4(o);
   c = cone(coneRatio);
@@ -232,7 +231,7 @@ void Hand::initialiseThumb(
         glm::radians(params[getParamPos(THUMB, ROT_1X)] + 15.0), 
         0.0f, 
         glm::radians(params[getParamPos(THUMB, ROT_1Z)] + 35.0)));
-  glm::gtc::quaternion::normalize(o);
+  o = glm::gtc::quaternion::normalize(o);
   r = glm::toMat4(o);
   current = start * t * r;
   sphereWVPs.push_back(current * s * it);
@@ -240,12 +239,18 @@ void Hand::initialiseThumb(
   // Sphere where thumb joins the ball
   t = glm::translate(glm::mat4(1.0f), glm::vec3(0.0f, 2.0f, 0.0f));
   s = glm::scale(glm::mat4(1.0f), glm::vec3(diameter, diameter, diameter));
-  current = current * t;
+
+  // Rotate so thumb movements are along the correct axis
+  o = glm::quat(glm::vec3(0.0f, glm::radians(90.0f), 0.0f));
+  o = glm::gtc::quaternion::normalize(o);
+  r = glm::toMat4(o);
+
+  current = current * t * r;
   sphereWVPs.push_back(current * s);
 
   current = initialiseJoint(
       current, 
-      0.0f,
+      0.0,
       params[getParamPos(THUMB, ROT_2Z)],
       diameter,
       length,
@@ -256,8 +261,8 @@ void Hand::initialiseThumb(
 
   current = initialiseJoint(
       current, 
-      0.0f,
-      params[getParamPos(THUMB, ROT_2Z)],
+      0.0, 
+      params[getParamPos(THUMB, ROT_3Z)],
       diameter,
       length,
       coneRatio);

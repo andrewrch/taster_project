@@ -23,17 +23,17 @@ Particle::Particle(unsigned int p, double C1, double C2) :
   {
     // Velocity always starts as 0
     velocity[i] = 0;
-    position[i] = rand()/double(RAND_MAX) * 30; 
-    printf("%f\n", rand()/double(RAND_MAX) * 30);
+    position[i] = rand() % 60 - 30; 
+//    printf("%f\n", rand()/double(RAND_MAX) * 30);
   }
 
-  position[0] = rand()/double(RAND_MAX) * 10; 
-  position[1] = rand()/double(RAND_MAX) * 10; 
-  position[2] = rand()/double(RAND_MAX) * 10; 
-  position[3] = rand()/double(RAND_MAX); 
-  position[4] = rand()/double(RAND_MAX); 
-  position[5] = rand()/double(RAND_MAX); 
-  position[6] = rand()/double(RAND_MAX); 
+  position[0] = rand()/double(RAND_MAX)*2; 
+  position[1] = rand()/double(RAND_MAX)*2; 
+  position[2] = rand()/double(RAND_MAX)*2; 
+  //position[3] = rand()/double(RAND_MAX) * 2; 
+  //position[4] = rand()/double(RAND_MAX); 
+  //position[5] = rand()/double(RAND_MAX); 
+  //position[6] = rand()/double(RAND_MAX); 
 }
 
 Particle& Particle::operator=(const Particle& p)
@@ -66,6 +66,8 @@ void Particle::update(double score, Particle best)
   {
     velocity[i] = k * (velocity[i] + c1r1 * (bestPosition[i] - position[i]) + \
                                      c2r2 * (best.getArray()[i] - position[i]));
+
+//    printf("%f\n", velocity[i]);
 
     position[i] = position[i] + velocity[i];
   }

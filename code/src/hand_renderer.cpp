@@ -22,8 +22,10 @@
 
 #include "particleswarm.hpp"
 
-static const unsigned int WINDOW_WIDTH = 640;
-static const unsigned int WINDOW_HEIGHT = 480;
+static const unsigned int WINDOW_WIDTH = 1024;
+static const unsigned int WINDOW_HEIGHT = 768;
+static const unsigned int RENDER_WIDTH = 4096;
+static const unsigned int RENDER_HEIGHT = 3072;
 
 static const double c1 = 2.8;
 static const double c2 = 1.3;
@@ -38,19 +40,26 @@ class HandRenderer : public ICallbacks
         unsigned int generations,
         string skinFilename, 
         string nonSkinFilename) :
-      pipeline(WINDOW_WIDTH, WINDOW_HEIGHT, particles),
+      windowPipeline(WINDOW_WIDTH, WINDOW_HEIGHT, particles),
+      renderPipeline(RENDER_WIDTH, RENDER_HEIGHT, particles),
       skinHist(skinFilename),
       nonSkinHist(nonSkinFilename),
       classifier(skinHist, nonSkinHist),
       swarm(particles, NUM_PARAMETERS, c1, c2), 
-      width(WINDOW_WIDTH),
-      height(WINDOW_HEIGHT),
+      windowWidth(WINDOW_WIDTH),
+      windowHeight(WINDOW_HEIGHT),
+      renderWidth(RENDER_WIDTH),
+      renderHeight(RENDER_HEIGHT),
       numTiles(particles),
       swarmGenerations(generations)
     {
     }
 
     ~HandRenderer() {}   
+    //At deinit:
+    //glDeleteFramebuffers(1,&fbo);
+    //glDeleteRenderbuffers(1,&renderBuffer);
+
 
     // Function turn a cv::Mat into a texture, and return the texture ID as a GLuint for use
     GLuint matToTexture(cv::Mat &mat, GLenum minFilter, GLenum magFilter, GLenum wrapFilter)
@@ -116,12 +125,18 @@ class HandRenderer : public ICallbacks
     bool init()
     {
         // Some initial vectors for camera
-        glm::vec3 pos(30.0f, 30.0f, 65.0f);
+        glm::vec3 pos(0.0f, 30.0f, 65.0f);
         glm::vec3 target(0.0f, 0.0f, 0.0f);
         glm::vec3 up(0.0, 1.0f, 0.0f);
 
-        pipeline.setCamera(pos, target, up);
-        pipeline.setPerspectiveProj(45.6f, (float) WINDOW_HEIGHT/ WINDOW_WIDTH, 1.0f, 100.0f);   
+        ////// 
+        //////
+        /// Do I really need two of these?
+        float aspect = (float) windowWidth / windowHeight;
+        windowPipeline.setCamera(pos, target, up);
+        windowPipeline.setPerspectiveProj(45.6f, aspect, 40.0f, 1000.0f);   
+        renderPipeline.setCamera(pos, target, up);
+        renderPipeline.setPerspectiveProj(45.6f, aspect, 40.0f, 1000.0f);   
 
         // Get meshes initialised
         mesh.init(0.5f, 50, 50, 0.5f, 1.0f, 20);
@@ -130,6 +145,9 @@ class HandRenderer : public ICallbacks
         tileShader.loadFromFile(GL_VERTEX_SHADER, "./src/shaders/tile_vs.glslv");
         tileShader.loadFromFile(GL_FRAGMENT_SHADER, "./src/shaders/tile_fs.glslf");
         tileShader.createAndLinkProgram();
+        tsLocation = tileShader.addUniform("tileSize");
+        tprLocation = tileShader.addUniform("tilesPerRow");
+        npLocation = tileShader.addUniform("numPrimitives");
 
         // Load shaders for display render
         renderShader.loadFromFile(GL_VERTEX_SHADER, "./src/shaders/hand_vs.glslv");
@@ -140,12 +158,9 @@ class HandRenderer : public ICallbacks
         glGenFramebuffers(1,&fbo);
         glGenRenderbuffers(1,&renderBuffer);
         glBindRenderbuffer(GL_RENDERBUFFER, renderBuffer);
-        glRenderbufferStorage(GL_RENDERBUFFER, GL_DEPTH_COMPONENT16, width, height);
-        glBindFramebuffer(GL_DRAW_FRAMEBUFFER,fbo);
+        glRenderbufferStorage(GL_RENDERBUFFER, GL_RGBA8, renderWidth, renderHeight);
+        glBindFramebuffer(GL_DRAW_FRAMEBUFFER, fbo);
         glFramebufferRenderbuffer(GL_DRAW_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_RENDERBUFFER, renderBuffer);
-        //At deinit:
-        glDeleteFramebuffers(1,&fbo);
-        glDeleteRenderbuffers(1,&renderBuffer);
         // Open the kinect up
         capture = cv::VideoCapture(CV_CAP_OPENNI);
 
@@ -199,25 +214,21 @@ class HandRenderer : public ICallbacks
           // For each particle in swarm build a hand
           Hand h(particles[i].getArray());
           // And add it to tile WVP arrays 
-          h.addToTileArrays(sphereWVPs, cylinderWVPs, i, pipeline);
+          h.addToTileArrays(sphereWVPs, cylinderWVPs, i, windowPipeline);
         }
 
         //Before drawing
         glBindFramebuffer(GL_DRAW_FRAMEBUFFER,fbo);
+        glViewport(0, 0, renderWidth, renderHeight);
+
         // Clear all the GL stuff ready for rendering.
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
         // Add uniforms
-        GLuint thLocation = tileShader.addUniform("tileHeight");
-        glUniform1f(thLocation, 1./(numTiles/3));
-        GLuint twLocation = tileShader.addUniform("tileWidth");
-        glUniform1f(twLocation, 1./numTiles/4);
-        GLuint ntxLocation = tileShader.addUniform("numTilesX");
-        glUniform1ui(ntxLocation, (unsigned int) numTiles / 3);
-        GLuint ntyLocation = tileShader.addUniform("numTilesY");
-        glUniform1ui(ntyLocation, (unsigned int) numTiles / 4);
-        GLuint npLocation = tileShader.addUniform("numPrimitives");
+        int x = sqrt(numTiles);
+        glUniform1f(tsLocation, 1./(x));
+        glUniform1ui(tprLocation, (unsigned int) numTiles / x);
         glUniform1ui(npLocation, NUM_CYLINDERS);
-
+        
         // Render to the renderbuffer
         mesh.renderCylinders(
             NUM_CYLINDERS * numTiles,
@@ -229,12 +240,36 @@ class HandRenderer : public ICallbacks
             NUM_SPHERES * numTiles, 
             sphereWVPs);
 
-        // Return to onscreen rendering:
+        tileShader.unUse();
+
+        glBindFramebuffer(GL_READ_FRAMEBUFFER,fbo);
         glBindFramebuffer(GL_DRAW_FRAMEBUFFER,0);
+       
+        //Set what color attachment we are reading
+        glReadBuffer(GL_COLOR_ATTACHMENT0);
+       
+        //Set to what attachment we will write
+        glDrawBuffer(GL_BACK);
+       
+        //This function does the magic of copying your FBO to the default one. 
+        //You could use it to copy only a region of the FBO to another region of the screen
+        //The parameter GL_LINEAR is the function to use in case the FBOs have different sizes.
+        glBlitFramebuffer(0, 0, renderWidth, renderHeight,
+           0, 0, windowWidth, windowHeight,
+           GL_COLOR_BUFFER_BIT, GL_LINEAR);
+       
+        //Resets the Draw Buffer to the default one
+        glDrawBuffer(GL_BACK);
+
+        glutSwapBuffers();
+
+        return GLCheckError();
     }
 
     cv::Mat getSegmentedHand(cv::Mat& depthImage)
     {
+      cv::Mat cat;
+      return cat;
     }
 
     void drawHand()
@@ -250,29 +285,32 @@ class HandRenderer : public ICallbacks
 
       Particle p = swarm.getBestParticle();
       Hand h(p.getArray());
-      h.addToArrays(sphereWVPs, cylinderWVPs, pipeline);
+      h.addToArrays(sphereWVPs, cylinderWVPs, windowPipeline);
 
       mesh.renderCylinders(NUM_CYLINDERS, cylinderWVPs);
       mesh.renderSpheres(NUM_SPHERES, sphereWVPs);
+
+      renderShader.unUse();
 
       glutSwapBuffers();
     }
 
     virtual void RenderSceneCB()
     {   
-      for (int i = 0; i < swarmGenerations; i++)
+      for (unsigned int i = 0; i < swarmGenerations; i++)
       {
         vector<double> scores(numTiles);
-        for (int j = 0; j < numTiles; j++)
+        for (unsigned int j = 0; j < numTiles; j++)
           scores[j] = rand() / double(RAND_MAX);
 
+        scores[0] = 1.0;
         swarm.updateSwarm(scores);
         makeTiledRendering();
 
       }
-      // First render the tiles
+      // First ree/der the tiles
       // Now draw the best hand
-      drawHand();
+      //drawHand();
       swarm.resetScores();
     }
 
@@ -312,20 +350,26 @@ class HandRenderer : public ICallbacks
 private:
     Mesh mesh;
     Shader tileShader, renderShader;
-    Pipeline pipeline;
+    Pipeline windowPipeline, renderPipeline;
     cv::VideoCapture capture;
     Histogram skinHist, nonSkinHist;
     Classifier classifier;
 
     ParticleSwarm swarm;
 
-    unsigned int width, height, numTiles, swarmGenerations;
+    unsigned int windowWidth, windowHeight, \
+                 renderWidth, renderHeight, \
+                 numTiles, swarmGenerations;
     GLuint bgrTexture, depthTexture;
     GLuint fbo, renderBuffer;
+    GLuint tsLocation, tprLocation, npLocation;
 };
 
 int main(int argc, char** argv)
 {
+    // Seed random numbers
+    srand(time(NULL));
+
     GLUTBackendInit(argc, argv);
 
     if (!GLUTBackendCreateWindow(WINDOW_WIDTH, WINDOW_HEIGHT, 32, false, "Hand Renderer")) {
@@ -338,7 +382,6 @@ int main(int argc, char** argv)
         return 1;
     }
 
-    srand(time(NULL));
     
     app->run();
     delete app;

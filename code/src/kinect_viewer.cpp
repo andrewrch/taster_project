@@ -15,11 +15,11 @@ int main( int argc, char* argv[] ){
   Histogram nonSkinHist(argv[2]);
 
   Classifier classifier(skinHist, nonSkinHist);
-  Thresholder thresholder(0.4, 0.5);
+  Thresholder thresholder(0.4, 0.5, 20);
 
   ComponentLabeller labeller;
 
-  DepthMasker masker(50);
+  DepthMasker masker(1);
 
   // Circular structure element
   cv::Mat se = cv::Mat::zeros(cv::Size(5, 5), CV_8UC1);
@@ -32,59 +32,78 @@ int main( int argc, char* argv[] ){
     cv::Mat depthMap;
     cv::Mat bgrImage;
     cv::Mat validPixels;
+    cv::Mat disp;
 		capture.grab();
 		capture.retrieve( depthMap, CV_CAP_OPENNI_DEPTH_MAP ); // Depth values in mm (CV_16UC1)
 		capture.retrieve( bgrImage, CV_CAP_OPENNI_BGR_IMAGE );
 		capture.retrieve( validPixels, CV_CAP_OPENNI_VALID_DEPTH_MASK );
+		capture.retrieve( disp, CV_CAP_OPENNI_DISPARITY_MAP );
+
+    //cv::medianBlur(yuvImage, yuvImage, 3);
+    cv::GaussianBlur(bgrImage, bgrImage, cv::Size(25, 25), 1.5);
 
     // Do processing with them
     cv::Mat yuvImage;
     cv::cvtColor(bgrImage, yuvImage, CV_BGR2YCrCb);
-    //cv::medianBlur(yuvImage, yuvImage, 3);
     cv::Mat prob = classifier.classifyImage(yuvImage);
-    cv::Mat skin = thresholder.thresholdImage(prob); 
+    cv::Mat skin = thresholder.thresholdImage(prob, depthMap, validPixels); 
 
     cv::morphologyEx(skin, skin, cv::MORPH_CLOSE, se);
 
-    cv::Mat labels = labeller.connectedComponentLabelling(skin);
-    vector<Blob> blobs = labeller.createBlobVector(labels);
+    cv::morphologyEx(skin, skin, cv::MORPH_DILATE, se);
 
-    // Get largest blob
-    int maxBlobSize = 0;
-    Blob* maxBlob;
-    for (vector<Blob>::iterator it = blobs.begin(); it < blobs.end(); ++it)
-      if (it->getSize() > maxBlobSize)
+    cv::Mat con = skin.clone();
+
+    vector<vector<cv::Point> > contours;
+    vector<cv::Vec4i> hierarchy;
+    // Find contours
+    cv::findContours( con, contours, hierarchy, CV_RETR_LIST, CV_CHAIN_APPROX_NONE, cv::Point(0, 0));
+
+    int biggestContour = 0, size = 0;
+    for (int i = 0; i < contours.size(); i++)
+      if (contours[i].size() > size)
       {
-        maxBlobSize = it->getSize();
-        maxBlob = &(*it);
+        biggestContour = i;
+        size = contours[i].size();
       }
 
-    cv::Mat  theBlob = cv::Mat::zeros(bgrImage.size(), CV_8UC1);
-    vector<cv::Point>& pts = maxBlob->getPoints();
-    for (vector<cv::Point>::iterator it = pts.begin(); it < pts.end(); ++it)
-      theBlob.at<char>(it->y, it->x) = 255;
+    // Draw contours
+    cv::Mat drawing = cv::Mat::zeros( skin.size(), CV_8UC1 );
+//    for( int i = 0; i< contours.size(); i++ )
+    cv::drawContours( drawing, contours, biggestContour, cv::Scalar(255), CV_FILLED, 8, hierarchy, 0, cv::Point() );
 
-    cv::Mat finalDepthImage = cv::Mat::zeros(bgrImage.size(), CV_8UC1);
-
-    cv::Mat depthMask = masker.maskImage(depthMap, validPixels, maxBlob->getPoints());
-    cv::morphologyEx(depthMask, depthMask, cv::MORPH_CLOSE, se);
-
+//    cv::Mat labels = labeller.connectedComponentLabelling(skin);
+//    cv::Mat labels = labeller.connectedComponentLabelling(con);
+//    vector<Blob> blobs = labeller.createBlobVector(labels);
+//
+//    // Get largest blob
+//    int maxBlobSize = 0;
+//    Blob* maxBlob;
+//    for (vector<Blob>::iterator it = blobs.begin(); it < blobs.end(); ++it)
+//      if (it->getSize() > maxBlobSize)
+//      {
+//        maxBlobSize = it->getSize();
+//        maxBlob = &(*it);
+//      }
+//
+//    cv::Mat depthMask = masker.maskImage(depthMap, validPixels, maxBlob->getPoints());
+//
+//    //cv::morphologyEx(depthMask, depthMask, cv::MORPH_DILATE, se);
+//    cv::morphologyEx(depthMask, depthMask, cv::MORPH_CLOSE, se);
+//
     cv::Mat maskedDepth = cv::Mat::zeros(bgrImage.size(), CV_8UC1);
 
     for (int i = 0; i < depthMap.rows; i++)
       for (int j = 0; j < depthMap.cols; j++)
-        if (depthMask.at<uchar>(i,j))
-          maskedDepth.at<uchar>(i, j) = depthMap.at<uint16_t>(i, j);
+        if (drawing.at<uchar>(i, j))
+          maskedDepth.at<uchar>(i, j) = disp.at<uchar>(i, j);
 
-    //cout << "rows: " << depthMap.rows << " cols: " << depthMap.cols << endl;
-    //cout << "depth: " << depthMap.at<unsigned short>(160,120) << endl;
+    cv::morphologyEx(maskedDepth, maskedDepth, cv::MORPH_CLOSE, se);
 
-//		imshow("Depth image", depthMap);
-		imshow("rgb image", bgrImage);
-    imshow("Probabilities", prob);
-//    imshow("Skin", skin);
-    imshow("Hand", depthMask);
-//    imshow("valid", validPixels);
+    imshow("probs", prob);
+    imshow("skin", skin);
+    imshow("draw", drawing);
+    imshow("disp", disp);
     imshow("final", maskedDepth);
 
 		if( cv::waitKey( 30 ) >= 0 )

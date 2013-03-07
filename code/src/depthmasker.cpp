@@ -18,14 +18,9 @@ cv::Mat DepthMasker::maskImage(
   cv::Mat depthMask = cv::Mat::zeros(depthImage.size(), CV_8UC1);
   cv::Mat visited = cv::Mat::zeros(depthImage.size(), CV_8UC1);
 
-  unsigned int totalDepth = 0;
-  for (vector<cv::Point>::iterator it = skinPixels.begin(); it < skinPixels.end(); ++it)
-    totalDepth += depthImage.at<uint16_t>(it->y, it->x);
-  unsigned int averageDepth = totalDepth / skinPixels.size();
-
   for (vector<cv::Point>::iterator it = skinPixels.begin(); it < skinPixels.end(); ++it)
   {
-    depthMask.at<uint8_t>(it->y, it->x) = 255;
+    depthMask.at<uchar>(it->y, it->x) = 255;
     if (!visited.at<uchar>(it->y, it->x))
       checkNeighbours( 
           depthMask, 
@@ -34,8 +29,7 @@ cv::Mat DepthMasker::maskImage(
           visited, 
           it->y, 
           it->x, 
-          averageDepth);
-  //        depthImage.at<uint16_t>(it->y, it->x));
+          depthImage.at<uint16_t>(it->y, it->x));
   }
 
   return depthMask;
@@ -55,10 +49,10 @@ void DepthMasker::checkNeighbours(
     visited.at<uchar>(row, col) = 1;
     if (abs(depthImage.at<uint16_t>(row, col) - depth) < tolerance 
         && depthImage.at<uint16_t>(row, col) < 2000
-        && validPixels.at<uchar>(row, col))
+        && depthImage.at<uint16_t>(row, col) > 0)
+        //&& validPixels.at<uchar>(row, col))
     {
-      //cout << abs(depthImage.at<uint16_t>(row, col) - depth) << endl;
-      //cout << "Depth: " << depthImage.at<uint16_t>(row, col) << " Other depth: " << depth << endl;
+
       depthMask.at<uint8_t>(row, col) = 255;
       // Recursively check surrounding pixels
       if (row > 0 && !visited.at<uchar>(row - 1, col))
