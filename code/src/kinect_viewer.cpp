@@ -59,8 +59,8 @@ int main( int argc, char* argv[] ){
     // Find contours
     cv::findContours( con, contours, hierarchy, CV_RETR_LIST, CV_CHAIN_APPROX_NONE, cv::Point(0, 0));
 
-    int biggestContour = 0, size = 0;
-    for (int i = 0; i < contours.size(); i++)
+    unsigned int biggestContour = 0, size = 0;
+    for (unsigned int i = 0; i < contours.size(); i++)
       if (contours[i].size() > size)
       {
         biggestContour = i;
@@ -101,8 +101,6 @@ int main( int argc, char* argv[] ){
     cv::morphologyEx(maskedDepth, maskedDepth, cv::MORPH_CLOSE, se);
 
     imshow("probs", prob);
-    imshow("skin", skin);
-    imshow("draw", drawing);
     imshow("disp", disp);
     imshow("final", maskedDepth);
 

@@ -113,6 +113,7 @@ class ModelViewer : public ICallbacks
           for(unsigned int j = 0; j < NUM_PARAMETERS; j++)
             p[j] = 0.0;
 
+          // Generate random hands
           p[7] = rand() % 40 - 20; 
           p[8] = rand() % 180 - 90;
           p[9] = rand() % 180 - 90;
@@ -122,7 +123,6 @@ class ModelViewer : public ICallbacks
           p[12] = rand() % 180 - 90;
           p[13] = rand() % 180 - 90;
           p[14] = rand() % 180 - 90;
-
 
           p[15] = rand() % 40 - 20; 
           p[16] = rand() % 180 - 90;
@@ -141,7 +141,6 @@ class ModelViewer : public ICallbacks
 
           Hand h(p);
           h.addToTileArrays(sphereWVPs, cylinderWVPs, i, pipeline);
-          // Generate random hands
         }
 
         mesh.renderCylinders(
@@ -177,40 +176,24 @@ class ModelViewer : public ICallbacks
       // Capital letter pressed
       // Position
       if (key >= 'A' && key <= 'C')
-      {
         handParams[key - 65] -= 0.5;
-      }
-
       // Orientation requires smaller adjustments
       else if (key >= 'D' && key <= 'G')
-      {
         handParams[key - 65] -= 0.1;
-      }
-
       // Adjusting angles of fingers
       else if (key >= 'H' && key <= '[')
-      {
         handParams[key - 65] -= 1.0;
-      }
 
       // Lower case letter pressed
       // Position
       else if (key >= 'a' && key < 'c')
-      {
         handParams[key - 97] += 0.5;
-      }
       // Orientation
       else if (key >= 'c' && key < 'g')
-      {
         handParams[key - 97] += 0.1;
-      }
       // Joint angles
       else if (key >= 'h' && key < '}')
-      {
         handParams[key - 97] += 1.0;
-      }
-
-      
 
       // Now handle other key presses
       else

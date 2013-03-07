@@ -22,8 +22,8 @@
 
 #include "particleswarm.hpp"
 
-static const unsigned int WINDOW_WIDTH = 1024;
-static const unsigned int WINDOW_HEIGHT = 768;
+static const unsigned int WINDOW_WIDTH = 640;
+static const unsigned int WINDOW_HEIGHT = 480;
 static const unsigned int RENDER_WIDTH = 4096;
 static const unsigned int RENDER_HEIGHT = 3072;
 
@@ -45,6 +45,7 @@ class HandRenderer : public ICallbacks
       skinHist(skinFilename),
       nonSkinHist(nonSkinFilename),
       classifier(skinHist, nonSkinHist),
+      thresholder(0.4, 0.5, 20),
       swarm(particles, NUM_PARAMETERS, c1, c2), 
       windowWidth(WINDOW_WIDTH),
       windowHeight(WINDOW_HEIGHT),
@@ -129,9 +130,6 @@ class HandRenderer : public ICallbacks
         glm::vec3 target(0.0f, 0.0f, 0.0f);
         glm::vec3 up(0.0, 1.0f, 0.0f);
 
-        ////// 
-        //////
-        /// Do I really need two of these?
         float aspect = (float) windowWidth / windowHeight;
         windowPipeline.setCamera(pos, target, up);
         windowPipeline.setPerspectiveProj(45.6f, aspect, 40.0f, 1000.0f);   
@@ -161,8 +159,13 @@ class HandRenderer : public ICallbacks
         glRenderbufferStorage(GL_RENDERBUFFER, GL_RGBA8, renderWidth, renderHeight);
         glBindFramebuffer(GL_DRAW_FRAMEBUFFER, fbo);
         glFramebufferRenderbuffer(GL_DRAW_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_RENDERBUFFER, renderBuffer);
+        glBindFramebuffer(GL_DRAW_FRAMEBUFFER,0);
         // Open the kinect up
         capture = cv::VideoCapture(CV_CAP_OPENNI);
+
+        // Structure element for morphology whatsit
+        se = cv::Mat::zeros(cv::Size(5, 5), CV_8UC1);
+        cv::circle(se, cv::Point(3, 3), 2, cv::Scalar(255), -1);
 
         return true;
     }
@@ -174,8 +177,6 @@ class HandRenderer : public ICallbacks
 
     void drawBackground()
     {
-        tileShader.unUse();
-        renderShader.unUse();
         glEnable(GL_TEXTURE_2D);
         glBindTexture(GL_TEXTURE_2D, bgrTexture);
         glDepthMask(GL_FALSE);
@@ -204,7 +205,6 @@ class HandRenderer : public ICallbacks
 
     bool makeTiledRendering()
     {
-        tileShader.use();
         glm::mat4 sphereWVPs[NUM_SPHERES * numTiles];
         glm::mat4 cylinderWVPs[NUM_CYLINDERS * numTiles];
 
@@ -220,65 +220,105 @@ class HandRenderer : public ICallbacks
         //Before drawing
         glBindFramebuffer(GL_DRAW_FRAMEBUFFER,fbo);
         glViewport(0, 0, renderWidth, renderHeight);
-
         // Clear all the GL stuff ready for rendering.
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-        // Add uniforms
+
+        tileShader.use();
+
         int x = sqrt(numTiles);
         glUniform1f(tsLocation, 1./(x));
         glUniform1ui(tprLocation, (unsigned int) numTiles / x);
         glUniform1ui(npLocation, NUM_CYLINDERS);
-        
-        // Render to the renderbuffer
-        mesh.renderCylinders(
-            NUM_CYLINDERS * numTiles,
-            cylinderWVPs);
-
+        mesh.renderCylinders(NUM_CYLINDERS * numTiles, cylinderWVPs);
         glUniform1ui(npLocation, NUM_SPHERES);
-
-        mesh.renderSpheres(
-            NUM_SPHERES * numTiles, 
-            sphereWVPs);
-
+        mesh.renderSpheres(NUM_SPHERES * numTiles, sphereWVPs);
         tileShader.unUse();
 
-        glBindFramebuffer(GL_READ_FRAMEBUFFER,fbo);
-        glBindFramebuffer(GL_DRAW_FRAMEBUFFER,0);
-       
-        //Set what color attachment we are reading
-        glReadBuffer(GL_COLOR_ATTACHMENT0);
-       
-        //Set to what attachment we will write
-        glDrawBuffer(GL_BACK);
-       
-        //This function does the magic of copying your FBO to the default one. 
-        //You could use it to copy only a region of the FBO to another region of the screen
-        //The parameter GL_LINEAR is the function to use in case the FBOs have different sizes.
-        glBlitFramebuffer(0, 0, renderWidth, renderHeight,
-           0, 0, windowWidth, windowHeight,
-           GL_COLOR_BUFFER_BIT, GL_LINEAR);
-       
-        //Resets the Draw Buffer to the default one
-        glDrawBuffer(GL_BACK);
 
-        glutSwapBuffers();
+        glBindFramebuffer(GL_DRAW_FRAMEBUFFER,0);
+//        Uncomment this to draw to window.
+//        *********************************
+//
+//        glBindFramebuffer(GL_READ_FRAMEBUFFER,fbo);
+//       
+//        //Set what color attachment we are reading
+//        glReadBuffer(GL_COLOR_ATTACHMENT0);
+//       
+//        //Set to what attachment we will write
+//        glDrawBuffer(GL_BACK);
+//       
+//        //This function does the magic of copying your FBO to the default one. 
+//        //You could use it to copy only a region of the FBO to another region of the screen
+//        //The parameter GL_LINEAR is the function to use in case the FBOs have different sizes.
+//        glBlitFramebuffer(0, 0, renderWidth, renderHeight,
+//           0, 0, windowWidth, windowHeight,
+//           GL_COLOR_BUFFER_BIT, GL_LINEAR);
+//       
+//        //Resets the Draw Buffer to the default one
+//        //glDrawBuffer(GL_BACK);
+//
+//        glutSwapBuffers();
 
         return GLCheckError();
     }
 
-    cv::Mat getSegmentedHand(cv::Mat& depthImage)
+    void processImages(cv::Mat& bgrImage, cv::Mat& depthMap)
     {
-      cv::Mat cat;
-      return cat;
+      capture.grab();
+      capture.retrieve( depthMap, CV_CAP_OPENNI_DEPTH_MAP );
+      capture.retrieve( bgrImage, CV_CAP_OPENNI_BGR_IMAGE );
+
+      // Require these images from the kinect as well...
+      cv::Mat validPixels;
+      cv::Mat dispMap;
+	  	capture.retrieve( validPixels, CV_CAP_OPENNI_VALID_DEPTH_MASK );
+		  capture.retrieve( dispMap, CV_CAP_OPENNI_DISPARITY_MAP );
+
+      cv::Mat bgrBlurred = bgrImage.clone();
+      //cv::medianBlur(yuvImage, yuvImage, 3);
+      cv::GaussianBlur(bgrImage, bgrBlurred, cv::Size(25, 25), 1.5);
+
+      // Do processing with them
+      cv::Mat yuvImage;
+      cv::cvtColor(bgrBlurred, yuvImage, CV_BGR2YCrCb);
+      cv::Mat prob = classifier.classifyImage(yuvImage);
+      cv::Mat skin = thresholder.thresholdImage(prob, depthMap, validPixels); 
+
+      cv::morphologyEx(skin, skin, cv::MORPH_CLOSE, se);
+      cv::morphologyEx(skin, skin, cv::MORPH_DILATE, se);
+
+      // Find contours in skin image
+      vector<vector<cv::Point> > contours;
+      vector<cv::Vec4i> hierarchy;
+      cv::Mat c = skin.clone();
+      cv::findContours(c, contours, hierarchy, CV_RETR_LIST, CV_CHAIN_APPROX_NONE, cv::Point(0, 0));
+
+      // Find largest contour
+      unsigned int largestContour = 0, size = 0;
+      for (unsigned int i = 0; i < contours.size(); i++)
+        if (contours[i].size() > size)
+        {
+          largestContour = i;
+          size = contours[i].size();
+        }
+
+      // Draw largest contour, filled
+      skin = cv::Mat::zeros( bgrImage.size(), CV_8UC1 );
+      cv::drawContours(skin, contours, largestContour, cv::Scalar(255), CV_FILLED, 8, hierarchy, 0, cv::Point() );
+
+      depthMap = cv::Mat::zeros(bgrImage.size(), CV_8UC1);
+      for (int i = 0; i < depthMap.rows; i++)
+        for (int j = 0; j < depthMap.cols; j++)
+          if (skin.at<uchar>(i, j))
+            depthMap.at<uchar>(i, j) = dispMap.at<uchar>(i, j);
     }
 
     void drawHand()
     {
       glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+      glViewport(0, 0, windowWidth, windowHeight);
       // First draw the background
       drawBackground();
-      // Want to render with correct shaders
-      renderShader.use();
 
       glm::mat4 sphereWVPs[NUM_SPHERES];
       glm::mat4 cylinderWVPs[NUM_CYLINDERS];
@@ -287,9 +327,9 @@ class HandRenderer : public ICallbacks
       Hand h(p.getArray());
       h.addToArrays(sphereWVPs, cylinderWVPs, windowPipeline);
 
+      renderShader.use();
       mesh.renderCylinders(NUM_CYLINDERS, cylinderWVPs);
       mesh.renderSpheres(NUM_SPHERES, sphereWVPs);
-
       renderShader.unUse();
 
       glutSwapBuffers();
@@ -308,9 +348,7 @@ class HandRenderer : public ICallbacks
         makeTiledRendering();
 
       }
-      // First ree/der the tiles
-      // Now draw the best hand
-      //drawHand();
+      drawHand();
       swarm.resetScores();
     }
 
@@ -318,9 +356,8 @@ class HandRenderer : public ICallbacks
     {
       cv::Mat depthImage;
       cv::Mat bgrImage;
-      capture.grab();
-      capture.retrieve( depthImage, CV_CAP_OPENNI_DEPTH_MAP );
-      capture.retrieve( bgrImage, CV_CAP_OPENNI_BGR_IMAGE );
+
+      processImages(bgrImage, depthImage);
 
       bgrTexture = matToTexture(bgrImage, GL_NEAREST, GL_NEAREST, GL_CLAMP);
       depthTexture = matToTexture(depthImage, GL_NEAREST, GL_NEAREST, GL_CLAMP);
@@ -354,6 +391,7 @@ private:
     cv::VideoCapture capture;
     Histogram skinHist, nonSkinHist;
     Classifier classifier;
+    Thresholder thresholder;
 
     ParticleSwarm swarm;
 
@@ -363,6 +401,7 @@ private:
     GLuint bgrTexture, depthTexture;
     GLuint fbo, renderBuffer;
     GLuint tsLocation, tprLocation, npLocation;
+    cv::Mat se;
 };
 
 int main(int argc, char** argv)
