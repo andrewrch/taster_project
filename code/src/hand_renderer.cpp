@@ -62,10 +62,14 @@ class HandRenderer : public ICallbacks
     {
     }
 
-    ~HandRenderer() {}   
+    ~HandRenderer() {
+      glDeleteFramebuffers(1,&fbo);
+      glDeleteRenderbuffers(1,&renderBuffer);
+    	glDeleteTextures(1, &bgrTexture);
+    	glDeleteTextures(1, &depthTexture);
+      glFinish();
+    }   
     //At deinit:
-    //glDeleteFramebuffers(1,&fbo);
-    //glDeleteRenderbuffers(1,&renderBuffer);
 
 
     // Function turn a cv::Mat into a texture
@@ -84,27 +88,34 @@ class HandRenderer : public ICallbacks
       // GL_LUMINANCE for CV_CAP_OPENNI_DISPARITY_MAP,
       // Work out other mappings as required ( there's a list in comments in main() )
       GLenum inputColourFormat = GL_BGR;
+      GLenum inputType = GL_UNSIGNED_BYTE;
+      GLenum internalFormat = GL_RGBA;
       if (mat.channels() == 1)
       {
         inputColourFormat = GL_LUMINANCE;
+        inputType = GL_UNSIGNED_SHORT;
+        internalFormat = GL_RGBA32F;
       }
+
+//      mat = cv::Mat::ones(cv::Size(imageWidth, imageHeight), CV_16UC1) * 1000;
+//      mat = mat * 255;
      
       // Create the texture
       glTexImage2D(GL_TEXTURE_2D,     // Type of texture
                    0,                 // Pyramid level (for mip-mapping) - 0 is the top level
-                   GL_RGBA,           // Internal colour format to convert to
+                   internalFormat,    // Internal colour format to convert to
                    mat.cols,          // Image width  i.e. 640 for Kinect in standard mode
                    mat.rows,          // Image height i.e. 480 for Kinect in standard mode
                    0,                 // Border width in pixels (can either be 1 or 0)
                    inputColourFormat, // Input image format (i.e. GL_RGB, GL_RGBA, GL_BGR etc.)
-                   GL_UNSIGNED_BYTE,  // Image data type
+                   inputType,         // Image data type
                    mat.ptr());        // The actual image data itself
     }
 
     bool init()
     {
         // Some initial vectors for camera
-        glm::vec3 pos(0.0f, 30.0f, 65.0f);
+        glm::vec3 pos(0.0f, 300.0f, 650.0f);
         glm::vec3 target(0.0f, 0.0f, 0.0f);
         glm::vec3 up(0.0, 1.0f, 0.0f);
 
@@ -135,7 +146,7 @@ class HandRenderer : public ICallbacks
         glGenFramebuffers(1,&fbo);
         glGenRenderbuffers(1,&renderBuffer);
         glBindRenderbuffer(GL_RENDERBUFFER, renderBuffer);
-        glRenderbufferStorage(GL_RENDERBUFFER, GL_RGBA8, renderWidth, renderHeight);
+        glRenderbufferStorage(GL_RENDERBUFFER, GL_RGBA16UI, renderWidth, renderHeight);
         glBindFramebuffer(GL_DRAW_FRAMEBUFFER, fbo);
         glFramebufferRenderbuffer(GL_DRAW_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_RENDERBUFFER, renderBuffer);
         glBindFramebuffer(GL_DRAW_FRAMEBUFFER,0);
@@ -143,8 +154,9 @@ class HandRenderer : public ICallbacks
         glGenTextures(1, &depthTexture);
         glGenTextures(1, &bgrTexture);
         // Initialise texture to blank image (Required for CL interop)
-        cv::Mat blank = cv::Mat::zeros(cv::Size(640, 480), CV_8UC3);
+        cv::Mat blank = cv::Mat::zeros(cv::Size(640, 480), CV_16UC1);
         matToTexture(depthTexture, blank);
+        blank = cv::Mat::zeros(cv::Size(640, 480), CV_8UC3);
         matToTexture(bgrTexture, blank);
 
         // OpenCL interop stuff here
@@ -169,7 +181,7 @@ class HandRenderer : public ICallbacks
     void drawBackground()
     {
         glEnable(GL_TEXTURE_2D);
-        glBindTexture(GL_TEXTURE_2D, bgrTexture);
+        glBindTexture(GL_TEXTURE_2D, depthTexture);
         glDepthMask(GL_FALSE);
         glBegin (GL_TRIANGLES);
           glTexCoord2f (1.0, 1.0);
@@ -209,6 +221,7 @@ class HandRenderer : public ICallbacks
           Hand h(particles[i].getArray());
           // And add it to tile WVP arrays 
           h.addToTileArrays(sphereWVPs, cylinderWVPs, i, windowPipeline);
+          h.addToWVArrays(sphereWVs, cylinderWVs, i, windowPipeline);
         }
 
         //Before drawing
@@ -223,34 +236,34 @@ class HandRenderer : public ICallbacks
         glUniform1f(tsLocation, 1./(x));
         glUniform1ui(tprLocation, (unsigned int) numTiles / x);
         glUniform1ui(npLocation, NUM_CYLINDERS);
-        mesh.renderCylinders(NUM_CYLINDERS * numTiles, cylinderWVPs);
+        mesh.renderCylinders(NUM_CYLINDERS * numTiles, cylinderWVPs, cylinderWVs);
         glUniform1ui(npLocation, NUM_SPHERES);
-        mesh.renderSpheres(NUM_SPHERES * numTiles, sphereWVPs);
+        mesh.renderSpheres(NUM_SPHERES * numTiles, sphereWVPs, sphereWVs);
         tileShader.unUse();
 
         glBindFramebuffer(GL_DRAW_FRAMEBUFFER,0);
 //        Uncomment this to draw to window.
 //        *********************************
 //
-//        glBindFramebuffer(GL_READ_FRAMEBUFFER,fbo);
-//       
-//        //Set what color attachment we are reading
-//        glReadBuffer(GL_COLOR_ATTACHMENT0);
-//       
-//        //Set to what attachment we will write
-//        glDrawBuffer(GL_BACK);
-//       
-//        //This function does the magic of copying your FBO to the default one. 
-//        //You could use it to copy only a region of the FBO to another region of the screen
-//        //The parameter GL_LINEAR is the function to use in case the FBOs have different sizes.
-//        glBlitFramebuffer(0, 0, renderWidth, renderHeight,
-//           0, 0, windowWidth, windowHeight,
-//           GL_COLOR_BUFFER_BIT, GL_LINEAR);
-//       
-//        //Resets the Draw Buffer to the default one
-//        //glDrawBuffer(GL_BACK);
-//
-//        glutSwapBuffers();
+        glBindFramebuffer(GL_READ_FRAMEBUFFER,fbo);
+       
+        //Set what color attachment we are reading
+        glReadBuffer(GL_COLOR_ATTACHMENT0);
+       
+        //Set to what attachment we will write
+        glDrawBuffer(GL_BACK);
+       
+        //This function does the magic of copying your FBO to the default one. 
+        //You could use it to copy only a region of the FBO to another region of the screen
+        //The parameter GL_LINEAR is the function to use in case the FBOs have different sizes.
+        glBlitFramebuffer(0, 0, renderWidth, renderHeight,
+           0, 0, windowWidth, windowHeight,
+           GL_COLOR_BUFFER_BIT, GL_LINEAR);
+       
+        //Resets the Draw Buffer to the default one
+        glDrawBuffer(GL_BACK);
+
+        glutSwapBuffers();
 
         return GLCheckError();
     }
@@ -314,13 +327,16 @@ class HandRenderer : public ICallbacks
           0, 
           cv::Point() );
 
-      depthMap = cv::Mat::zeros(bgrImage.size(), CV_8UC1);
+//      depthMap = cv::Mat::zeros(bgrImage.size(), CV_8UC1);
       for (int i = 0; i < depthMap.rows; i++)
         for (int j = 0; j < depthMap.cols; j++)
-          if (skin.at<uchar>(i, j))
-            depthMap.at<uchar>(i, j) = dispMap.at<uchar>(i, j);
+          if (!skin.at<uchar>(i, j))
+            depthMap.at<uint16_t>(i, j) = 0; //dispMap.at<uchar>(i, j);
+//          else
+//            depthMap.at<uint16_t>(i, j) = 10000; //dispMap.at<uchar>(i, j);
 
       cv::resize(depthMap, depthMap, cv::Size(imageWidth, imageHeight));
+      //imshow("d", depthMap);
     }
 
     void drawHand()
@@ -332,14 +348,17 @@ class HandRenderer : public ICallbacks
 
       glm::mat4 sphereWVPs[NUM_SPHERES];
       glm::mat4 cylinderWVPs[NUM_CYLINDERS];
+      glm::mat4 sphereWVs[NUM_SPHERES];
+      glm::mat4 cylinderWVs[NUM_CYLINDERS];
 
       Particle p = swarm.getBestParticle();
       Hand h(p.getArray());
-      h.addToArrays(sphereWVPs, cylinderWVPs, windowPipeline);
+      h.addToWVPArrays(sphereWVPs, cylinderWVPs, 0, windowPipeline);
+      h.addToWVArrays(sphereWVs, cylinderWVs, 0, windowPipeline);
 
       renderShader.use();
-      mesh.renderCylinders(NUM_CYLINDERS, cylinderWVPs);
-      mesh.renderSpheres(NUM_SPHERES, sphereWVPs);
+      mesh.renderCylinders(NUM_CYLINDERS, cylinderWVPs, cylinderWVs);
+      mesh.renderSpheres(NUM_SPHERES, sphereWVPs, sphereWVs);
       renderShader.unUse();
 
       glutSwapBuffers();
@@ -373,8 +392,6 @@ class HandRenderer : public ICallbacks
       matToTexture(bgrTexture, bgrImage);
       matToTexture(depthTexture, depthImage);
       RenderSceneCB();
-    	//glDeleteTextures(1, &bgrTexture);
-    	//glDeleteTextures(1, &depthTexture);
     }
 
     virtual void KeyboardCB(unsigned char Key, int x, int y)
@@ -388,7 +405,7 @@ class HandRenderer : public ICallbacks
 
     virtual void TimerCB(int val)
     {
-        RenderSceneCB();
+//        RenderSceneCB();
     }
 
     virtual void PassiveMouseCB(int x, int y) {}

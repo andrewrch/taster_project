@@ -22,9 +22,16 @@ class Hand
         unsigned int,       // Tile number
         Pipeline&);          // Pipeline for (Tile)VP info
 
-    void addToArrays(
+    void addToWVPArrays(
         glm::mat4*,         // Spheres
         glm::mat4*,         // Cylinders
+        unsigned int,       // Tile number
+        Pipeline&);         // Pipeline for VP info
+
+    void addToWVArrays(
+        glm::mat4*,         // Spheres
+        glm::mat4*,         // Cylinders
+        unsigned int,       // Tile number
         Pipeline&);         // Pipeline for VP info
 
     ~Hand();

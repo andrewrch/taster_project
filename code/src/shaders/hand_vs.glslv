@@ -3,6 +3,7 @@
 layout (location = 0) in vec3 position;
 layout (location = 1) in vec3 normal;
 layout (location = 2) in mat4 WVP;
+layout (location = 6) in mat4 WV;
     
 out vec4 projPos;
 out vec4 colour;

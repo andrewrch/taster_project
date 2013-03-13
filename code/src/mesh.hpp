@@ -47,10 +47,12 @@ class Mesh
     // For convenience put in a single call?
     void renderSpheres(
         unsigned int,
+        const glm::mat4*,
         const glm::mat4*);
 
     void renderCylinders(
         unsigned int,
+        const glm::mat4*,
         const glm::mat4*);
         
 
@@ -81,7 +83,7 @@ class Mesh
 #define POS_VB       1
 #define NORMAL_VB    2
 #define WVP_MAT_VB   3
-//#define WORLD_MAT_VB 4
+#define WORLD_MAT_VB 4
 
     GLuint VAO;
     GLuint axes;

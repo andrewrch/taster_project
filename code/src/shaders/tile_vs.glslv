@@ -7,13 +7,14 @@ layout (location = 6) in mat4 WV;
     
 out vec4 projPos;
 out vec4 colour;
-out varying float depth;
+varying float depth;
 flat out int instanceID; 
 
 void main()
 {
   gl_Position = projPos = WVP * vec4(position, 1.0);
-  depth = (WV * vec4(position, 1.0)).z;
+  vec4 d = (WV * vec4(position, 1.0));
+  depth = -d.z;
   colour = vec4(clamp(position, 0.0, 1.0), 1.0);
   instanceID = gl_InstanceID;  
 }

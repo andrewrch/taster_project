@@ -6,8 +6,8 @@
 #include "hand.hpp"
 #include "cone.hpp"
 
-const double Hand::diameters[] = {1.0, 1.0, 1.0, 0.8, 1.2};
-const double Hand::lengths[] = {2.0, 2.2, 2.0, 1.5, 1.5};
+const double Hand::diameters[] = {18.0, 20.0, 18.0, 12.0, 20.0};
+const double Hand::lengths[] = {35.0, 40.0, 35.0, 30.0, 40.0};
 
 Hand::Hand(double params[NUM_PARAMETERS]) :
   // Initialise vectors with 0 length for push_back
@@ -16,7 +16,7 @@ Hand::Hand(double params[NUM_PARAMETERS]) :
 {
   // Centre of palm is origin of shape - possibly move this
   // depending on performance of model in testing
-  palmScale = glm::vec3(4.0f, 3.5f, 1.5f);
+  palmScale = glm::vec3(80.0f, 70.0f, 25.0f);
   // This is just for shifting the origin about
   palmPos = glm::vec3(0.0f, 0.0f, 0.0f);
   // First finger is
@@ -28,8 +28,8 @@ Hand::Hand(double params[NUM_PARAMETERS]) :
 
   // Going to use push_back so reserve
   // space for all matrices
-  sphereWVPs.reserve(NUM_SPHERES);
-  cylinderWVPs.reserve(NUM_CYLINDERS);
+//  sphereWVPs.reserve(NUM_SPHERES);
+//  cylinderWVPs.reserve(NUM_CYLINDERS);
 
   initialiseHand(params);
 }
@@ -52,17 +52,32 @@ void Hand::addToTileArrays(
     cylinders[tile * NUM_CYLINDERS + i] = t * cylinderWVPs[i];
 }
 
-void Hand::addToWVArrays(
+void Hand::addToWVPArrays(
     glm::mat4* spheres,
     glm::mat4* cylinders,
+    unsigned int tile,
     Pipeline& p)
 {
   glm::mat4 t = p.getVPTrans();
   for (unsigned int i = 0; i < NUM_SPHERES; i++)
-    spheres[i] = t * sphereWVPs[i];
+    spheres[tile * NUM_SPHERES + i] = t * sphereWVPs[i];
 
   for (unsigned int i = 0; i < NUM_CYLINDERS; i++)
-    cylinders[i] = t * cylinderWVPs[i];
+    cylinders[tile * NUM_CYLINDERS + i] = t * cylinderWVPs[i];
+}
+
+void Hand::addToWVArrays(
+    glm::mat4* spheres,
+    glm::mat4* cylinders,
+    unsigned int tile,
+    Pipeline& p)
+{
+  glm::mat4 t = p.getVTrans();
+  for (unsigned int i = 0; i < NUM_SPHERES; i++)
+    spheres[tile * NUM_SPHERES + i] = t * sphereWVPs[i];
+
+  for (unsigned int i = 0; i < NUM_CYLINDERS; i++)
+    cylinders[tile * NUM_CYLINDERS + i] = t * cylinderWVPs[i];
 }
 
 void Hand::initialiseHand(double params[NUM_PARAMETERS])
@@ -147,7 +162,7 @@ void Hand::initialiseFinger(
     double params[NUM_PARAMETERS])
 {
   double coneRatio = 0.95;
-  double lengthUpdate = 0.66;
+  double lengthUpdate = 0.5;
   double diameter = diameters[finger];
   double length = lengths[finger];
 

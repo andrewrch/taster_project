@@ -20,6 +20,16 @@
 
 #include "pipeline.hpp"
 
+const glm::mat4& Pipeline::getVTrans()
+{
+  glm::mat4 cameraTrans;
+
+  cameraTrans = glm::lookAt(camera.pos, camera.target, camera.up);
+    
+  VTransformation = cameraTrans;
+  return VTransformation;
+}
+
 const glm::mat4& Pipeline::getVPTrans()
 {
   glm::mat4 cameraTrans, projTrans;

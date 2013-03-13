@@ -83,8 +83,7 @@ class Pipeline
     void setTiles(unsigned int tiles) { numTiles = tiles; }
 
     const glm::mat4& getVPTrans();
-    const glm::mat4& getWVPTrans();
-    const glm::mat4& getWorldTrans();
+    const glm::mat4& getVTrans();
     const glm::mat4& getTileTrans(unsigned int);
 
   private:
@@ -112,9 +111,8 @@ class Pipeline
       glm::vec3 up;
     } camera;
 
-    glm::mat4 WVPTransformation;
     glm::mat4 VPTransformation;
-    glm::mat4 worldTransformation;
+    glm::mat4 VTransformation;
     glm::mat4 tileTransformation;
 };
 

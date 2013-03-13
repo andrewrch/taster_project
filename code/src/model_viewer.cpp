@@ -39,7 +39,7 @@ class ModelViewer : public ICallbacks
     bool init()
     {
         // Some initial vectors for camera
-        glm::vec3 pos(10.0f, 10.0f, 30.0f);
+        glm::vec3 pos(100.0f, 100.0f, 300.0f);
         glm::vec3 target(0.0f, 0.0f, 0.0f);
         glm::vec3 up(0.0, 1.0f, 0.0f);
 
@@ -97,6 +97,8 @@ class ModelViewer : public ICallbacks
 
         glm::mat4 sphereWVPs[NUM_SPHERES*numTiles];
         glm::mat4 cylinderWVPs[NUM_CYLINDERS*numTiles];
+        glm::mat4 sphereWVs[NUM_SPHERES*numTiles];
+        glm::mat4 cylinderWVs[NUM_CYLINDERS*numTiles];
 
         // Build a hand from parameters
         Hand h(handParams);
@@ -104,7 +106,8 @@ class ModelViewer : public ICallbacks
         if (numTiles != 1)
           h.addToTileArrays(sphereWVPs, cylinderWVPs, 0, pipeline);
         else
-          h.addToArrays(sphereWVPs, cylinderWVPs, pipeline);
+          h.addToWVPArrays(sphereWVPs, cylinderWVPs, 0, pipeline);
+        h.addToWVArrays(sphereWVs, cylinderWVs, 0, pipeline);
 
         // Here handle when we add more tiles (Generate random hands...)
         for (unsigned int i = 1; i < numTiles; i++)
@@ -141,18 +144,19 @@ class ModelViewer : public ICallbacks
 
           Hand h(p);
           h.addToTileArrays(sphereWVPs, cylinderWVPs, i, pipeline);
+          h.addToWVArrays(sphereWVs, cylinderWVs, i, pipeline);
         }
 
         mesh.renderCylinders(
             NUM_CYLINDERS*numTiles,
-            cylinderWVPs);
+            cylinderWVPs, cylinderWVs);
 
         if (!useHandShader)
           glUniform1ui(npLocation, NUM_SPHERES);
 
         mesh.renderSpheres(
             NUM_SPHERES*numTiles, 
-            sphereWVPs);
+            sphereWVPs, sphereWVs);
 
         glutSwapBuffers();
     }
