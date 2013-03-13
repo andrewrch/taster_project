@@ -32,9 +32,10 @@ void main()
     //float n = 40.0f; // camera z near
     //float f = 1000.0f; // camera z far
     //float z_e = (n * z) / ( f - z * (f - n) );
+
     //fragColour = vec4(z_e, z_e, z_e, 1.0); //colour;
     //
     // Use raw nonlinear depth like the Kinect.
-    fragColour = vec4(z, z, z, 1.0); //colour;
+    fragColour = vec4(1.0 - z, 1.0 - z, 1.0 - z, 1.0); //colour;
   }
 }

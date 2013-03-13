@@ -48,9 +48,7 @@ int main( int argc, char* argv[] ){
     cv::Mat prob = classifier.classifyImage(yuvImage);
     cv::Mat skin = thresholder.thresholdImage(prob, depthMap, validPixels); 
 
-    cv::morphologyEx(skin, skin, cv::MORPH_CLOSE, se);
-
-    cv::morphologyEx(skin, skin, cv::MORPH_DILATE, se);
+    cv::morphologyEx(skin, skin, cv::MORPH_DILATE, se); //, cv::Point(-1,-1), 5);
 
     cv::Mat con = skin.clone();
 
@@ -101,8 +99,10 @@ int main( int argc, char* argv[] ){
     cv::morphologyEx(maskedDepth, maskedDepth, cv::MORPH_CLOSE, se);
 
     imshow("probs", prob);
+    imshow("skin", skin);
     imshow("disp", disp);
     imshow("final", maskedDepth);
+    imshow("bgr", bgrImage);
 
 		if( cv::waitKey( 30 ) >= 0 )
 			break;

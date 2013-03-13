@@ -5,22 +5,23 @@
 #include <math.h>
 #include <GL/glew.h>
 #include <GL/freeglut.h>
-
 #include <glm/glm.hpp>
 #include <glm/gtc/matrix_transform.hpp>
+#include <opencv2/opencv.hpp>
 
 #include "pipeline.hpp"
 #include "hand.hpp"
 #include "mesh.hpp"
 #include "shader.hpp"
 #include "glut_backend.hpp"
-#include "opencv2/opencv.hpp"
 
 #include "histogram.hpp"
 #include "thresholder.hpp"
 #include "classifier.hpp"
 
 #include "particleswarm.hpp"
+
+#include "scorer.hpp"
 
 static const unsigned int WINDOW_WIDTH = 640;
 static const unsigned int WINDOW_HEIGHT = 480;
@@ -38,6 +39,8 @@ class HandRenderer : public ICallbacks
     HandRenderer(
         unsigned int particles, 
         unsigned int generations,
+        unsigned int width,
+        unsigned int height,
         string skinFilename, 
         string nonSkinFilename) :
       windowPipeline(WINDOW_WIDTH, WINDOW_HEIGHT, particles),
@@ -47,10 +50,13 @@ class HandRenderer : public ICallbacks
       classifier(skinHist, nonSkinHist),
       thresholder(0.4, 0.5, 20),
       swarm(particles, NUM_PARAMETERS, c1, c2), 
+      scorer(particles, 20, width, height),
+      imageWidth(width),
+      imageHeight(width),
       windowWidth(WINDOW_WIDTH),
       windowHeight(WINDOW_HEIGHT),
-      renderWidth(RENDER_WIDTH),
-      renderHeight(RENDER_HEIGHT),
+      renderWidth(sqrt(particles) * width),
+      renderHeight(sqrt(particles) * height),
       numTiles(particles),
       swarmGenerations(generations)
     {
@@ -62,34 +68,17 @@ class HandRenderer : public ICallbacks
     //glDeleteRenderbuffers(1,&renderBuffer);
 
 
-    // Function turn a cv::Mat into a texture, and return the texture ID as a GLuint for use
-    GLuint matToTexture(cv::Mat &mat, GLenum minFilter, GLenum magFilter, GLenum wrapFilter)
+    // Function turn a cv::Mat into a texture
+    void matToTexture(GLuint textureID, cv::Mat &mat)
     {
-      // Generate a number for our textureID's unique handle
-      GLuint textureID;
-      glGenTextures(1, &textureID);
-     
       // Bind to our texture handle
       glBindTexture(GL_TEXTURE_2D, textureID);
-     
-      // Catch silly-mistake texture interpolation method for magnification
-      if (magFilter == GL_LINEAR_MIPMAP_LINEAR  ||
-          magFilter == GL_LINEAR_MIPMAP_NEAREST ||
-          magFilter == GL_NEAREST_MIPMAP_LINEAR ||
-          magFilter == GL_NEAREST_MIPMAP_NEAREST)
-      {
-        cout << "You can't use MIPMAPs for magnification - setting filter to GL_LINEAR" << endl;
-        magFilter = GL_LINEAR;
-      }
-     
       // Set texture interpolation methods for minification and magnification
-      glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, minFilter);
-      glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, magFilter);
-     
-      // Set texture clamping method
-      glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, wrapFilter);
-      glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, wrapFilter);
-     
+      glTexParameterf(GL_TEXTURE_2D,GL_TEXTURE_MIN_FILTER,GL_LINEAR); 
+      glTexParameterf(GL_TEXTURE_2D,GL_TEXTURE_MAG_FILTER,GL_LINEAR); 
+      glTexParameterf( GL_TEXTURE_2D, GL_TEXTURE_WRAP_S , GL_REPEAT );
+      glTexParameterf( GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT );
+ 
       // Set incoming texture format to:
       // GL_BGR       for CV_CAP_OPENNI_BGR_IMAGE,
       // GL_LUMINANCE for CV_CAP_OPENNI_DISPARITY_MAP,
@@ -103,24 +92,13 @@ class HandRenderer : public ICallbacks
       // Create the texture
       glTexImage2D(GL_TEXTURE_2D,     // Type of texture
                    0,                 // Pyramid level (for mip-mapping) - 0 is the top level
-                   GL_RGB,            // Internal colour format to convert to
+                   GL_RGBA,           // Internal colour format to convert to
                    mat.cols,          // Image width  i.e. 640 for Kinect in standard mode
                    mat.rows,          // Image height i.e. 480 for Kinect in standard mode
                    0,                 // Border width in pixels (can either be 1 or 0)
                    inputColourFormat, // Input image format (i.e. GL_RGB, GL_RGBA, GL_BGR etc.)
                    GL_UNSIGNED_BYTE,  // Image data type
                    mat.ptr());        // The actual image data itself
-     
-      // If we're using mipmaps then generate them. Note: This requires OpenGL 3.0 or higher
-      if (minFilter == GL_LINEAR_MIPMAP_LINEAR  ||
-          minFilter == GL_LINEAR_MIPMAP_NEAREST ||
-          minFilter == GL_NEAREST_MIPMAP_LINEAR ||
-          minFilter == GL_NEAREST_MIPMAP_NEAREST)
-      {
-        glGenerateMipmap(GL_TEXTURE_2D);
-      }
-     
-      return textureID;
     }
 
     bool init()
@@ -153,6 +131,7 @@ class HandRenderer : public ICallbacks
         // Compile and then link the shaders
         renderShader.createAndLinkProgram();
 
+        printf("making buffers...\n");
         glGenFramebuffers(1,&fbo);
         glGenRenderbuffers(1,&renderBuffer);
         glBindRenderbuffer(GL_RENDERBUFFER, renderBuffer);
@@ -160,6 +139,18 @@ class HandRenderer : public ICallbacks
         glBindFramebuffer(GL_DRAW_FRAMEBUFFER, fbo);
         glFramebufferRenderbuffer(GL_DRAW_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_RENDERBUFFER, renderBuffer);
         glBindFramebuffer(GL_DRAW_FRAMEBUFFER,0);
+
+        glGenTextures(1, &depthTexture);
+        glGenTextures(1, &bgrTexture);
+        // Initialise texture to blank image (Required for CL interop)
+        cv::Mat blank = cv::Mat::zeros(cv::Size(640, 480), CV_8UC3);
+        matToTexture(depthTexture, blank);
+        matToTexture(bgrTexture, blank);
+
+        // OpenCL interop stuff here
+        scorer.loadProgram("./src/kernels/distancekernel.cl");
+        scorer.loadData(renderBuffer, depthTexture);
+
         // Open the kinect up
         capture = cv::VideoCapture(CV_CAP_OPENNI);
 
@@ -208,6 +199,9 @@ class HandRenderer : public ICallbacks
         glm::mat4 sphereWVPs[NUM_SPHERES * numTiles];
         glm::mat4 cylinderWVPs[NUM_CYLINDERS * numTiles];
 
+        glm::mat4 sphereWVs[NUM_SPHERES * numTiles];
+        glm::mat4 cylinderWVs[NUM_CYLINDERS * numTiles];
+
         vector<Particle>& particles = swarm.getParticles();
         for (unsigned int i = 0; i < particles.size(); i++)
         {
@@ -233,7 +227,6 @@ class HandRenderer : public ICallbacks
         glUniform1ui(npLocation, NUM_SPHERES);
         mesh.renderSpheres(NUM_SPHERES * numTiles, sphereWVPs);
         tileShader.unUse();
-
 
         glBindFramebuffer(GL_DRAW_FRAMEBUFFER,0);
 //        Uncomment this to draw to window.
@@ -291,7 +284,13 @@ class HandRenderer : public ICallbacks
       vector<vector<cv::Point> > contours;
       vector<cv::Vec4i> hierarchy;
       cv::Mat c = skin.clone();
-      cv::findContours(c, contours, hierarchy, CV_RETR_LIST, CV_CHAIN_APPROX_NONE, cv::Point(0, 0));
+      cv::findContours(
+          c, 
+          contours, 
+          hierarchy, 
+          CV_RETR_LIST, 
+          CV_CHAIN_APPROX_NONE, 
+          cv::Point(0, 0));
 
       // Find largest contour
       unsigned int largestContour = 0, size = 0;
@@ -304,13 +303,24 @@ class HandRenderer : public ICallbacks
 
       // Draw largest contour, filled
       skin = cv::Mat::zeros( bgrImage.size(), CV_8UC1 );
-      cv::drawContours(skin, contours, largestContour, cv::Scalar(255), CV_FILLED, 8, hierarchy, 0, cv::Point() );
+      cv::drawContours(
+          skin, 
+          contours, 
+          largestContour, 
+          cv::Scalar(255), 
+          CV_FILLED, 
+          8, 
+          hierarchy, 
+          0, 
+          cv::Point() );
 
       depthMap = cv::Mat::zeros(bgrImage.size(), CV_8UC1);
       for (int i = 0; i < depthMap.rows; i++)
         for (int j = 0; j < depthMap.cols; j++)
           if (skin.at<uchar>(i, j))
             depthMap.at<uchar>(i, j) = dispMap.at<uchar>(i, j);
+
+      cv::resize(depthMap, depthMap, cv::Size(imageWidth, imageHeight));
     }
 
     void drawHand()
@@ -339,14 +349,15 @@ class HandRenderer : public ICallbacks
     {   
       for (unsigned int i = 0; i < swarmGenerations; i++)
       {
+        makeTiledRendering();
+        scorer.calculateScores();
+        // Get scores from rendering
         vector<double> scores(numTiles);
         for (unsigned int j = 0; j < numTiles; j++)
           scores[j] = rand() / double(RAND_MAX);
 
         scores[0] = 1.0;
         swarm.updateSwarm(scores);
-        makeTiledRendering();
-
       }
       drawHand();
       swarm.resetScores();
@@ -358,17 +369,12 @@ class HandRenderer : public ICallbacks
       cv::Mat bgrImage;
 
       processImages(bgrImage, depthImage);
-
-      bgrTexture = matToTexture(bgrImage, GL_NEAREST, GL_NEAREST, GL_CLAMP);
-      depthTexture = matToTexture(depthImage, GL_NEAREST, GL_NEAREST, GL_CLAMP);
+      // Generate a number for our textureID's unique handle
+      matToTexture(bgrTexture, bgrImage);
+      matToTexture(depthTexture, depthImage);
       RenderSceneCB();
-    	glDeleteTextures(1, &bgrTexture);
-    	glDeleteTextures(1, &depthTexture);
-    }
-
-    virtual void TimerCB(int val)
-    {
-        RenderSceneCB();
+    	//glDeleteTextures(1, &bgrTexture);
+    	//glDeleteTextures(1, &depthTexture);
     }
 
     virtual void KeyboardCB(unsigned char Key, int x, int y)
@@ -378,6 +384,11 @@ class HandRenderer : public ICallbacks
                 glutLeaveMainLoop();
                 break;
         }
+    }
+
+    virtual void TimerCB(int val)
+    {
+        RenderSceneCB();
     }
 
     virtual void PassiveMouseCB(int x, int y) {}
@@ -392,16 +403,18 @@ private:
     Histogram skinHist, nonSkinHist;
     Classifier classifier;
     Thresholder thresholder;
-
     ParticleSwarm swarm;
+    Scorer scorer;
 
-    unsigned int windowWidth, windowHeight, \
+    unsigned int imageWidth, imageHeight, \
+                 windowWidth, windowHeight, \
                  renderWidth, renderHeight, \
                  numTiles, swarmGenerations;
     GLuint bgrTexture, depthTexture;
     GLuint fbo, renderBuffer;
     GLuint tsLocation, tprLocation, npLocation;
     cv::Mat se;
+
 };
 
 int main(int argc, char** argv)
@@ -415,7 +428,7 @@ int main(int argc, char** argv)
         return 1;
     }
     
-    HandRenderer* app = new HandRenderer(atoi(argv[1]), atoi(argv[2]), argv[3], argv[4]);
+    HandRenderer* app = new HandRenderer(atoi(argv[1]), atoi(argv[2]), 320, 240, argv[3], argv[4]);
 
     if (!app->init()) {
         return 1;

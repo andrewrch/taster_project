@@ -1,5 +1,5 @@
-CFLAGS := -g -Wall
-LDFLAGS := -lm -lGL -lGLEW -lglut `pkg-config opencv --libs` 
+CFLAGS := -g -Wall #-I/opt/AMDAPP/include 
+LDFLAGS := -lm -lGL -lGLEW -lglut -lOpenCL `pkg-config opencv --libs` 
 
 all: hand_renderer kinect_viewer model_viewer
 
@@ -26,6 +26,8 @@ hand_renderer:\
 	src/pipeline.hpp\
 	src/shader.cpp\
 	src/shader.hpp\
+	src/scorer.hpp\
+	src/scorer.cpp\
 	src/thresholder.cpp\
 	src/thresholder.hpp\
 	src/particle.cpp\

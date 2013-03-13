@@ -36,29 +36,6 @@ const glm::mat4& Pipeline::getVPTrans()
   return VPTransformation;
 }
 
-const glm::mat4& Pipeline::getWorldTrans()
-{
-  glm::mat4 scaleTrans, rotateTrans, translationTrans;
-
-  // Can probably make this more efficient with some reading.
-  scaleTrans = glm::scale(scaleTrans, scale);
-  //  rotateTrans = glm::rotate(rotateTrans, 45.0f, rotateInfo);
-  rotateTrans = glm::toMat4(orientation);
-  translationTrans = glm::translate(translationTrans, worldPos);
-
-  worldTransformation = translationTrans * rotateTrans * scaleTrans;// * cone;
-  return worldTransformation;
-}
-
-const glm::mat4& Pipeline::getWVPTrans()
-{
-  getWorldTrans();
-  getVPTrans();
-
-  WVPTransformation = VPTransformation * worldTransformation;
-  return WVPTransformation;
-}
-
 const glm::mat4& Pipeline::getTileTrans(unsigned int i)
 {
   getVPTrans();

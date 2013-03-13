@@ -39,13 +39,13 @@ class ModelViewer : public ICallbacks
     bool init()
     {
         // Some initial vectors for camera
-        glm::vec3 pos(10.0f, 10.0f, 50.0f);
+        glm::vec3 pos(10.0f, 10.0f, 30.0f);
         glm::vec3 target(0.0f, 0.0f, 0.0f);
         glm::vec3 up(0.0, 1.0f, 0.0f);
 
         pipeline.setCamera(pos, target, up);
         float aspect = (float) WINDOW_WIDTH / WINDOW_HEIGHT;
-        pipeline.setPerspectiveProj(45.6f, aspect, 20.0f, 1000.0f);   
+        pipeline.setPerspectiveProj(45.6f, aspect, 10.0f, 1000.0f);   
 
         // Get meshes initialised
         mesh.init(0.5f, 50, 50, 0.5f, 1.0f, 20);
@@ -186,13 +186,13 @@ class ModelViewer : public ICallbacks
 
       // Lower case letter pressed
       // Position
-      else if (key >= 'a' && key < 'c')
+      else if (key >= 'a' && key <= 'c')
         handParams[key - 97] += 0.5;
       // Orientation
-      else if (key >= 'c' && key < 'g')
+      else if (key >= 'd' && key <= 'g')
         handParams[key - 97] += 0.1;
       // Joint angles
-      else if (key >= 'h' && key < '}')
+      else if (key >= 'h' && key <= '{')
         handParams[key - 97] += 1.0;
 
       // Now handle other key presses

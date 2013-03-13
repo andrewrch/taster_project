@@ -14,12 +14,6 @@ Hand::Hand(double params[NUM_PARAMETERS]) :
   sphereWVPs(0),
   cylinderWVPs(0)
 {
-  // First some set model parameters
-  //
-  // TODO TODO TODO
-  // Can update this to be a bit nicer when merging the mesh
-  // class (E.g. include sphere diameter etc)
-  //
   // Centre of palm is origin of shape - possibly move this
   // depending on performance of model in testing
   palmScale = glm::vec3(4.0f, 3.5f, 1.5f);
@@ -58,7 +52,7 @@ void Hand::addToTileArrays(
     cylinders[tile * NUM_CYLINDERS + i] = t * cylinderWVPs[i];
 }
 
-void Hand::addToArrays(
+void Hand::addToWVArrays(
     glm::mat4* spheres,
     glm::mat4* cylinders,
     Pipeline& p)
