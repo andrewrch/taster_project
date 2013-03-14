@@ -38,18 +38,23 @@ __kernel void calculateImageCharacteristics (
                                  patchY * patchSizeY + y);
 
 //      printf("image coords: %d %d, renderCoords: %d %d\n", imageCoords.x, imageCoords.y, \
- //            rendCoords.x, rendCoords.y);
+//             rendCoords.x, rendCoords.y);
 
 
       uint4 renderVal = read_imageui(tiledRender, sampler, rendCoords);
-      float4 depthVal = read_imagef(depthImage, sampler, imageCoords);
+      uint4 depthVal = read_imageui(depthImage, sampler, imageCoords);
+
+      //float4 renderVal = read_imagef(tiledRender, sampler, rendCoords);
+      //float4 depthVal = read_imagef(depthImage, sampler, imageCoords);
 
 
       if ( renderVal.x > 0 || renderVal.y > 0 || renderVal.z > 0)
       {
-      printf("%f %f %f %f\n", depthVal.x * 65535, depthVal.y * 65535, depthVal.z * 65535, depthVal.w * 65535);
-      printf("renderVal: %d %d %d %d\n", renderVal.x, renderVal.y, renderVal.z, renderVal.s3);
-      //    printf("depthVal: %f %f %f %f\n", depthVal.x, depthVal.y, depthVal.z, depthVal.s3);
+//      printf("depthVal: %u %u %u %u\n", depthVal.x, depthVal.y, depthVal.z, depthVal.w);
+//      printf("renderVal: %u %u %u %u\n", renderVal.x, renderVal.y, renderVal.z, renderVal.s3);
+
+      //printf("depthVal: %f %f %f %f\n", depthVal.x, depthVal.y, depthVal.z, depthVal.w);
+      //printf("renderVal: %f %f %f %f\n", renderVal.x, renderVal.y, renderVal.z, renderVal.s3);
       }
 
       diffSum += (renderVal.x - depthVal.x);

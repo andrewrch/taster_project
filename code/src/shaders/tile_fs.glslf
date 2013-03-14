@@ -37,7 +37,8 @@ void main()
     // Use raw nonlinear depth like the Kinect.
     //fragColour = vec4(1.0 - z, 1.0 - z, 1.0 - z, 1.0); //colour;
 
-    fragColour = ivec4(uint(depth), depth, depth, 1); //colour;
-    //fragColour = vec4(50000 / 65535, 50000, 50000, 1); //colour;
+    //fragColour = ivec4(depth, depth, depth, 1); //colour;
+    fragColour = ivec4(50000, 50000, 50000, 1); //colour;
+    //fragColour = vec4(1, 1, 1, 1); //colour;
   }
 }

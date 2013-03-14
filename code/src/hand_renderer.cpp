@@ -63,8 +63,10 @@ class HandRenderer : public ICallbacks
     }
 
     ~HandRenderer() {
-      glDeleteFramebuffers(1,&fbo);
-      glDeleteRenderbuffers(1,&renderBuffer);
+      glDeleteFramebuffers(1,&tileFBO);
+      glDeleteRenderbuffers(1,&tileRB);
+      glDeleteFramebuffers(1,&depthFBO);
+      glDeleteRenderbuffers(1,&depthRB);
     	glDeleteTextures(1, &bgrTexture);
     	glDeleteTextures(1, &depthTexture);
       glFinish();
@@ -92,14 +94,12 @@ class HandRenderer : public ICallbacks
       GLenum internalFormat = GL_RGBA;
       if (mat.channels() == 1)
       {
+        cout << "Depth texture" << endl;
         inputColourFormat = GL_LUMINANCE;
         inputType = GL_UNSIGNED_SHORT;
-        internalFormat = GL_RGBA32F;
+        internalFormat = GL_RGBA16UI;
       }
 
-//      mat = cv::Mat::ones(cv::Size(imageWidth, imageHeight), CV_16UC1) * 1000;
-//      mat = mat * 255;
-     
       // Create the texture
       glTexImage2D(GL_TEXTURE_2D,     // Type of texture
                    0,                 // Pyramid level (for mip-mapping) - 0 is the top level
@@ -110,6 +110,49 @@ class HandRenderer : public ICallbacks
                    inputColourFormat, // Input image format (i.e. GL_RGB, GL_RGBA, GL_BGR etc.)
                    inputType,         // Image data type
                    mat.ptr());        // The actual image data itself
+
+      glBindTexture(GL_TEXTURE_2D, 0);
+    }
+
+    void copyTextureToFramebuffer(GLuint texture, GLuint buffer)
+    {
+      GLuint fbo;
+      glGenFramebuffers(1,&fbo);
+      glBindFramebuffer(GL_READ_FRAMEBUFFER, fbo);
+      glFramebufferTexture2D(GL_READ_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, texture, 0);
+       
+      //Set what color attachment we are reading
+      glReadBuffer(GL_COLOR_ATTACHMENT0);
+       
+      //Set to what attachment we will write
+      //
+      glBindFramebuffer(GL_DRAW_FRAMEBUFFER, buffer);
+      //glDrawBuffer(buffer);
+       
+      glBlitFramebuffer(0, 0, imageWidth, imageHeight,
+         0, 0, imageWidth, imageHeight,
+         GL_COLOR_BUFFER_BIT, GL_LINEAR);
+       
+      //Resets the Draw Buffer to the default one
+      //glDrawBuffer(GL_BACK);
+
+      //glBindFramebuffer(GL_READ_FRAMEBUFFER, buffer);
+      //glBindFramebuffer(GL_DRAW_FRAMEBUFFER, 0);
+      //cout << "drawing to back buffer" << endl;
+      //glBlitFramebuffer(0, 0, imageWidth, imageHeight,
+      //   0, 0, windowWidth, windowHeight,
+      //   GL_COLOR_BUFFER_BIT, GL_LINEAR);
+
+
+      glBlitFramebuffer(0, 0, renderWidth, renderHeight,
+         0, 0, windowWidth, windowHeight,
+         GL_COLOR_BUFFER_BIT, GL_LINEAR);
+      //glutSwapBuffers();
+      
+      glBindFramebuffer(GL_DRAW_FRAMEBUFFER, 0);
+      glBindFramebuffer(GL_READ_FRAMEBUFFER, 0);
+
+      glDeleteFramebuffers(1,&fbo);
     }
 
     bool init()
@@ -143,13 +186,35 @@ class HandRenderer : public ICallbacks
         renderShader.createAndLinkProgram();
 
         printf("making buffers...\n");
-        glGenFramebuffers(1,&fbo);
-        glGenRenderbuffers(1,&renderBuffer);
-        glBindRenderbuffer(GL_RENDERBUFFER, renderBuffer);
+        glGenFramebuffers(1,&tileFBO);
+        glGenRenderbuffers(1,&tileRB);
+        glBindFramebuffer(GL_FRAMEBUFFER, tileFBO);
+        glBindRenderbuffer(GL_RENDERBUFFER, tileRB);
         glRenderbufferStorage(GL_RENDERBUFFER, GL_RGBA16UI, renderWidth, renderHeight);
-        glBindFramebuffer(GL_DRAW_FRAMEBUFFER, fbo);
-        glFramebufferRenderbuffer(GL_DRAW_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_RENDERBUFFER, renderBuffer);
-        glBindFramebuffer(GL_DRAW_FRAMEBUFFER,0);
+        glFramebufferRenderbuffer(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_RENDERBUFFER, tileRB);
+
+        glBindFramebuffer(GL_FRAMEBUFFER, 0);
+        glBindRenderbuffer(GL_RENDERBUFFER, 0);
+
+        GLenum status;
+        status = glCheckFramebufferStatusEXT( GL_FRAMEBUFFER );
+        if( status != GL_FRAMEBUFFER_COMPLETE )
+          fprintf( stderr, "FrameBuffer is not complete.\n" );
+
+        //glBindFramebuffer(GL_DRAW_FRAMEBUFFER,0);
+        printf("making buffers...\n");
+        glGenFramebuffers(1,&depthFBO);
+        glGenRenderbuffers(1,&depthRB);
+        glBindFramebuffer(GL_FRAMEBUFFER, depthFBO);
+        glBindRenderbuffer(GL_RENDERBUFFER, depthRB);
+        glRenderbufferStorage(GL_RENDERBUFFER, GL_RGBA16UI, imageWidth, imageHeight);
+        glFramebufferRenderbuffer(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_RENDERBUFFER, depthRB);
+
+        status = glCheckFramebufferStatusEXT( GL_FRAMEBUFFER );
+        if( status != GL_FRAMEBUFFER_COMPLETE )
+          fprintf( stderr, "FrameBuffer is not complete.\n" );
+
+        glBindFramebuffer(GL_FRAMEBUFFER, 0);
 
         glGenTextures(1, &depthTexture);
         glGenTextures(1, &bgrTexture);
@@ -161,7 +226,7 @@ class HandRenderer : public ICallbacks
 
         // OpenCL interop stuff here
         scorer.loadProgram("./src/kernels/distancekernel.cl");
-        scorer.loadData(renderBuffer, depthTexture);
+        scorer.loadData(tileRB, depthRB);
 
         // Open the kinect up
         capture = cv::VideoCapture(CV_CAP_OPENNI);
@@ -176,34 +241,6 @@ class HandRenderer : public ICallbacks
     void run()
     {
         GLUTBackendRun(this);
-    }
-
-    void drawBackground()
-    {
-        glEnable(GL_TEXTURE_2D);
-        glBindTexture(GL_TEXTURE_2D, depthTexture);
-        glDepthMask(GL_FALSE);
-        glBegin (GL_TRIANGLES);
-          glTexCoord2f (1.0, 1.0);
-          glVertex2f (-1.0, -1.0);
-
-          glTexCoord2f (0.0, 0.0);
-          glVertex2f (1.0, 1.0);
-
-          glTexCoord2f (0.0, 1.0);
-          glVertex2f (1.0, -1.0);
-
-          glTexCoord2f (1.0, 1.0);
-          glVertex2f (-1.0, -1.0);
-
-          glTexCoord2f (1.0, 0.0);
-          glVertex2f (-1.0, 1.0);
-
-          glTexCoord2f (0.0, 0.0);
-          glVertex2f (1.0, 1.0);
-        glEnd ();
-        glDepthMask(GL_TRUE);
-        glDisable(GL_TEXTURE_2D);
     }
 
     bool makeTiledRendering()
@@ -225,7 +262,7 @@ class HandRenderer : public ICallbacks
         }
 
         //Before drawing
-        glBindFramebuffer(GL_DRAW_FRAMEBUFFER,fbo);
+        glBindFramebuffer(GL_FRAMEBUFFER, tileFBO);
         glViewport(0, 0, renderWidth, renderHeight);
         // Clear all the GL stuff ready for rendering.
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
@@ -241,29 +278,29 @@ class HandRenderer : public ICallbacks
         mesh.renderSpheres(NUM_SPHERES * numTiles, sphereWVPs, sphereWVs);
         tileShader.unUse();
 
-        glBindFramebuffer(GL_DRAW_FRAMEBUFFER,0);
+        glBindFramebuffer(GL_FRAMEBUFFER, 0);
 //        Uncomment this to draw to window.
 //        *********************************
 //
-        glBindFramebuffer(GL_READ_FRAMEBUFFER,fbo);
+        glBindFramebuffer(GL_READ_FRAMEBUFFER,tileFBO);
        
         //Set what color attachment we are reading
         glReadBuffer(GL_COLOR_ATTACHMENT0);
        
         //Set to what attachment we will write
-        glDrawBuffer(GL_BACK);
+        //glDrawBuffer(GL_BACK);
        
         //This function does the magic of copying your FBO to the default one. 
         //You could use it to copy only a region of the FBO to another region of the screen
         //The parameter GL_LINEAR is the function to use in case the FBOs have different sizes.
-        glBlitFramebuffer(0, 0, renderWidth, renderHeight,
-           0, 0, windowWidth, windowHeight,
-           GL_COLOR_BUFFER_BIT, GL_LINEAR);
+        //glBlitFramebuffer(0, 0, renderWidth, renderHeight,
+        //   0, 0, windowWidth, windowHeight,
+        //   GL_COLOR_BUFFER_BIT, GL_LINEAR);
        
         //Resets the Draw Buffer to the default one
         glDrawBuffer(GL_BACK);
 
-        glutSwapBuffers();
+        //glutSwapBuffers();
 
         return GLCheckError();
     }
@@ -339,10 +376,41 @@ class HandRenderer : public ICallbacks
       //imshow("d", depthMap);
     }
 
+    void drawBackground()
+    {
+        glEnable(GL_TEXTURE_2D);
+        glBindTexture(GL_TEXTURE_2D, bgrTexture);
+        glDepthMask(GL_FALSE);
+        glBegin (GL_TRIANGLES);
+          glTexCoord2f (1.0, 1.0);
+          glVertex2f (-1.0, -1.0);
+
+          glTexCoord2f (0.0, 0.0);
+          glVertex2f (1.0, 1.0);
+
+          glTexCoord2f (0.0, 1.0);
+          glVertex2f (1.0, -1.0);
+
+          glTexCoord2f (1.0, 1.0);
+          glVertex2f (-1.0, -1.0);
+
+          glTexCoord2f (1.0, 0.0);
+          glVertex2f (-1.0, 1.0);
+
+          glTexCoord2f (0.0, 0.0);
+          glVertex2f (1.0, 1.0);
+        glEnd ();
+        glDepthMask(GL_TRUE);
+        glBindTexture(GL_TEXTURE_2D, 0);
+        glDisable(GL_TEXTURE_2D);
+    }
+
     void drawHand()
     {
+      glBindFramebuffer(GL_FRAMEBUFFER, 0);
       glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
       glViewport(0, 0, windowWidth, windowHeight);
+
       // First draw the background
       drawBackground();
 
@@ -361,7 +429,6 @@ class HandRenderer : public ICallbacks
       mesh.renderSpheres(NUM_SPHERES, sphereWVPs, sphereWVs);
       renderShader.unUse();
 
-      glutSwapBuffers();
     }
 
     virtual void RenderSceneCB()
@@ -369,7 +436,6 @@ class HandRenderer : public ICallbacks
       for (unsigned int i = 0; i < swarmGenerations; i++)
       {
         makeTiledRendering();
-        scorer.calculateScores();
         // Get scores from rendering
         vector<double> scores(numTiles);
         for (unsigned int j = 0; j < numTiles; j++)
@@ -379,7 +445,11 @@ class HandRenderer : public ICallbacks
         swarm.updateSwarm(scores);
       }
       drawHand();
+
+      glutSwapBuffers();
       swarm.resetScores();
+        scorer.calculateScores();
+
     }
 
     virtual void IdleCB()
@@ -388,9 +458,13 @@ class HandRenderer : public ICallbacks
       cv::Mat bgrImage;
 
       processImages(bgrImage, depthImage);
+
+      depthImage = cv::Mat::ones(depthImage.size(), CV_16UC1) * 10000;
       // Generate a number for our textureID's unique handle
       matToTexture(bgrTexture, bgrImage);
       matToTexture(depthTexture, depthImage);
+      
+      copyTextureToFramebuffer(depthTexture, depthFBO);
       RenderSceneCB();
     }
 
@@ -428,7 +502,7 @@ private:
                  renderWidth, renderHeight, \
                  numTiles, swarmGenerations;
     GLuint bgrTexture, depthTexture;
-    GLuint fbo, renderBuffer;
+    GLuint tileFBO, tileRB, depthFBO, depthRB;
     GLuint tsLocation, tprLocation, npLocation;
     cv::Mat se;
 

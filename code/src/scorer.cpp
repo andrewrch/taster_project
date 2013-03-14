@@ -188,26 +188,33 @@ void Scorer::loadProgramFromString(const string& kernel_source)
   	std::cout << "Build Log:\t " << program.getBuildInfo<CL_PROGRAM_BUILD_LOG>(devices[0]) << std::endl;
 }
 
-void Scorer::loadData(GLuint rbo, GLuint dTexture)
+void Scorer::loadData(GLuint rbo, GLuint dRbo)
 {
     //make sure OpenGL is finished before we proceed
     glFinish();
     printf("gl interop!\n");
     // create OpenCL buffer from GL VBO
     try {
-      clObjects.push_back(cl::BufferRenderGL(context, CL_MEM_READ_WRITE, rbo, &err));
+      clObjects.push_back(cl::BufferRenderGL(context, CL_MEM_READ_ONLY, rbo, &err));
     } catch (cl::Error er) {
-      printf("Renderbuffer fail\n");
+      printf("Renderbuffer 1 fail\n");
       cout << er.what() << " " << er.err() << endl;
     }
-    try{
-      clObjects.push_back(cl::Image2DGL(context, CL_MEM_READ_ONLY, GL_TEXTURE_2D, 0, dTexture, &err));
-    }
-    catch (cl::Error er) {
-      cout << "Texture fail" << endl;
+    try {
+      clObjects.push_back(cl::BufferRenderGL(context, CL_MEM_READ_ONLY, dRbo, &err));
+    } catch (cl::Error er) {
+      printf("Renderbuffer 2 fail\n");
       cout << er.what() << " " << er.err() << endl;
-      printf("v_vbo: %s\n", oclErrorString(err)); 
     }
+
+//    try{
+//      clObjects.push_back(cl::Image2DGL(context, CL_MEM_READ_ONLY, GL_TEXTURE_2D, 0, dRbo, &err));
+//    }
+//    catch (cl::Error er) {
+//      cout << "Texture fail" << endl;
+//      cout << er.what() << " " << er.err() << endl;
+//      printf("v_vbo: %s\n", oclErrorString(err)); 
+//    }
 
     cout << "Objects size: " << clObjects.size() << endl;
 
@@ -261,13 +268,12 @@ std::vector<double> Scorer::calculateScores()
     intersection[i] = 0;
   }
 
-//  printf("Pushing data to the GPU\n");
+  //printf("Pushing data to the GPU\n");
   err = queue.enqueueWriteBuffer(differenceSum, CL_TRUE, 0, arraySize, &diff[0], NULL, &event);
   err = queue.enqueueWriteBuffer(unionSum, CL_TRUE, 0, arraySize, &Union[0], NULL, &event);
   err = queue.enqueueWriteBuffer(intersectionSum, CL_TRUE, 0, arraySize, &intersection[0], NULL, &event);
-  // And wait for copy to finish
-  queue.finish();
 
+  //cout << "Waiting for GL finish" << endl;
   glFinish();
   try{
     err = queue.enqueueAcquireGLObjects(&clObjects, NULL, &event);
@@ -276,10 +282,6 @@ std::vector<double> Scorer::calculateScores()
       cout << "Aquire fail" << endl;
       cout << er.what() << " " << er.err() << endl;
   }
-  queue.finish();
-
-      err = kernel.setArg(0, clObjects[0]); // The renderbuffer
-      err = kernel.setArg(1, clObjects[1]); // The depth texture
 
   // Bit of a hack made from this GPU, but can have max 256
   // work items, so since image is always 4:3, use 192 (16*12)
@@ -297,7 +299,6 @@ std::vector<double> Scorer::calculateScores()
       cout << "Queue fail" << endl;
       cout << er.what() << " " << er.err() << endl;
   }
-  queue.finish();
 
   queue.enqueueReadBuffer(differenceSum, CL_TRUE, 0, arraySize, &diff[0]);
   queue.enqueueReadBuffer(unionSum, CL_TRUE, 0, arraySize, &Union[0]);
@@ -323,7 +324,7 @@ std::vector<double> Scorer::calculateScores()
 
   //Release the VBOs so OpenGL can play with them
   err = queue.enqueueReleaseGLObjects(&clObjects, NULL, &event);
-  //printf("release gl: %s\n", oclErrorString(err));
+  printf("release gl: %s\n", oclErrorString(err));
   queue.finish();
 
   return scores;
