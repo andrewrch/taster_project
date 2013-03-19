@@ -25,8 +25,6 @@
 
 static const unsigned int WINDOW_WIDTH = 640;
 static const unsigned int WINDOW_HEIGHT = 480;
-static const unsigned int RENDER_WIDTH = 4096;
-static const unsigned int RENDER_HEIGHT = 3072;
 
 static const double c1 = 2.8;
 static const double c2 = 1.3;
@@ -43,8 +41,6 @@ class HandRenderer : public ICallbacks
         unsigned int height,
         string skinFilename, 
         string nonSkinFilename) :
-      windowPipeline(WINDOW_WIDTH, WINDOW_HEIGHT, particles),
-      renderPipeline(RENDER_WIDTH, RENDER_HEIGHT, particles),
       skinHist(skinFilename),
       nonSkinHist(nonSkinFilename),
       classifier(skinHist, nonSkinHist),
@@ -52,30 +48,28 @@ class HandRenderer : public ICallbacks
       swarm(particles, NUM_PARAMETERS, c1, c2), 
       scorer(particles, 20, width, height),
       imageWidth(width),
-      imageHeight(width),
+      imageHeight(height),
       windowWidth(WINDOW_WIDTH),
       windowHeight(WINDOW_HEIGHT),
       renderWidth(sqrt(particles) * width),
       renderHeight(sqrt(particles) * height),
       numTiles(particles),
-      swarmGenerations(generations)
+      swarmGenerations(generations),
+      windowPipeline(windowWidth, windowHeight, numTiles),
+      renderPipeline(renderWidth, renderHeight, numTiles)
     {
     }
 
     ~HandRenderer() {
       glDeleteFramebuffers(1,&tileFBO);
       glDeleteRenderbuffers(1,&tileRB);
-      glDeleteFramebuffers(1,&depthFBO);
-      glDeleteRenderbuffers(1,&depthRB);
     	glDeleteTextures(1, &bgrTexture);
     	glDeleteTextures(1, &depthTexture);
       glFinish();
     }   
-    //At deinit:
-
 
     // Function turn a cv::Mat into a texture
-    void matToTexture(GLuint textureID, cv::Mat &mat)
+    void matToTexture(GLuint textureID, cv::Mat& mat)
     {
       // Bind to our texture handle
       glBindTexture(GL_TEXTURE_2D, textureID);
@@ -84,21 +78,26 @@ class HandRenderer : public ICallbacks
       glTexParameterf(GL_TEXTURE_2D,GL_TEXTURE_MAG_FILTER,GL_LINEAR); 
       glTexParameterf( GL_TEXTURE_2D, GL_TEXTURE_WRAP_S , GL_REPEAT );
       glTexParameterf( GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT );
+
+      //use fast 4-byte alignment (default anyway) if possible
+      glPixelStorei(GL_PACK_ALIGNMENT, (mat.step & 3) ? 1 : 4);
+      //set length of one complete row in destination data (doesn't need to equal img.cols)
+      glPixelStorei(GL_PACK_ROW_LENGTH, mat.step/mat.elemSize());
  
-      // Set incoming texture format to:
-      // GL_BGR       for CV_CAP_OPENNI_BGR_IMAGE,
-      // GL_LUMINANCE for CV_CAP_OPENNI_DISPARITY_MAP,
-      // Work out other mappings as required ( there's a list in comments in main() )
+      // Set incoming texture format
       GLenum inputColourFormat = GL_BGR;
       GLenum inputType = GL_UNSIGNED_BYTE;
       GLenum internalFormat = GL_RGBA;
       if (mat.channels() == 1)
       {
-        cout << "Depth texture" << endl;
-        inputColourFormat = GL_LUMINANCE;
+        inputColourFormat = GL_RED_INTEGER;
         inputType = GL_UNSIGNED_SHORT;
         internalFormat = GL_RGBA16UI;
+
+        imshow("depth", mat * 1000);
+        cvWaitKey(30);
       }
+
 
       // Create the texture
       glTexImage2D(GL_TEXTURE_2D,     // Type of texture
@@ -109,50 +108,9 @@ class HandRenderer : public ICallbacks
                    0,                 // Border width in pixels (can either be 1 or 0)
                    inputColourFormat, // Input image format (i.e. GL_RGB, GL_RGBA, GL_BGR etc.)
                    inputType,         // Image data type
-                   mat.ptr());        // The actual image data itself
+                   mat.data);         // The actual image data itself
 
       glBindTexture(GL_TEXTURE_2D, 0);
-    }
-
-    void copyTextureToFramebuffer(GLuint texture, GLuint buffer)
-    {
-      GLuint fbo;
-      glGenFramebuffers(1,&fbo);
-      glBindFramebuffer(GL_READ_FRAMEBUFFER, fbo);
-      glFramebufferTexture2D(GL_READ_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, texture, 0);
-       
-      //Set what color attachment we are reading
-      glReadBuffer(GL_COLOR_ATTACHMENT0);
-       
-      //Set to what attachment we will write
-      //
-      glBindFramebuffer(GL_DRAW_FRAMEBUFFER, buffer);
-      //glDrawBuffer(buffer);
-       
-      glBlitFramebuffer(0, 0, imageWidth, imageHeight,
-         0, 0, imageWidth, imageHeight,
-         GL_COLOR_BUFFER_BIT, GL_LINEAR);
-       
-      //Resets the Draw Buffer to the default one
-      //glDrawBuffer(GL_BACK);
-
-      //glBindFramebuffer(GL_READ_FRAMEBUFFER, buffer);
-      //glBindFramebuffer(GL_DRAW_FRAMEBUFFER, 0);
-      //cout << "drawing to back buffer" << endl;
-      //glBlitFramebuffer(0, 0, imageWidth, imageHeight,
-      //   0, 0, windowWidth, windowHeight,
-      //   GL_COLOR_BUFFER_BIT, GL_LINEAR);
-
-
-      glBlitFramebuffer(0, 0, renderWidth, renderHeight,
-         0, 0, windowWidth, windowHeight,
-         GL_COLOR_BUFFER_BIT, GL_LINEAR);
-      //glutSwapBuffers();
-      
-      glBindFramebuffer(GL_DRAW_FRAMEBUFFER, 0);
-      glBindFramebuffer(GL_READ_FRAMEBUFFER, 0);
-
-      glDeleteFramebuffers(1,&fbo);
     }
 
     bool init()
@@ -185,31 +143,17 @@ class HandRenderer : public ICallbacks
         // Compile and then link the shaders
         renderShader.createAndLinkProgram();
 
-        printf("making buffers...\n");
         glGenFramebuffers(1,&tileFBO);
         glGenRenderbuffers(1,&tileRB);
         glBindFramebuffer(GL_FRAMEBUFFER, tileFBO);
         glBindRenderbuffer(GL_RENDERBUFFER, tileRB);
-        glRenderbufferStorage(GL_RENDERBUFFER, GL_RGBA16UI, renderWidth, renderHeight);
+        glRenderbufferStorage(GL_RENDERBUFFER, GL_RGBA32F, renderWidth, renderHeight);
         glFramebufferRenderbuffer(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_RENDERBUFFER, tileRB);
 
         glBindFramebuffer(GL_FRAMEBUFFER, 0);
         glBindRenderbuffer(GL_RENDERBUFFER, 0);
 
         GLenum status;
-        status = glCheckFramebufferStatusEXT( GL_FRAMEBUFFER );
-        if( status != GL_FRAMEBUFFER_COMPLETE )
-          fprintf( stderr, "FrameBuffer is not complete.\n" );
-
-        //glBindFramebuffer(GL_DRAW_FRAMEBUFFER,0);
-        printf("making buffers...\n");
-        glGenFramebuffers(1,&depthFBO);
-        glGenRenderbuffers(1,&depthRB);
-        glBindFramebuffer(GL_FRAMEBUFFER, depthFBO);
-        glBindRenderbuffer(GL_RENDERBUFFER, depthRB);
-        glRenderbufferStorage(GL_RENDERBUFFER, GL_RGBA16UI, imageWidth, imageHeight);
-        glFramebufferRenderbuffer(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_RENDERBUFFER, depthRB);
-
         status = glCheckFramebufferStatusEXT( GL_FRAMEBUFFER );
         if( status != GL_FRAMEBUFFER_COMPLETE )
           fprintf( stderr, "FrameBuffer is not complete.\n" );
@@ -226,7 +170,8 @@ class HandRenderer : public ICallbacks
 
         // OpenCL interop stuff here
         scorer.loadProgram("./src/kernels/distancekernel.cl");
-        scorer.loadData(tileRB, depthRB);
+        scorer.loadData(tileRB, depthTexture);
+
 
         // Open the kinect up
         capture = cv::VideoCapture(CV_CAP_OPENNI);
@@ -282,25 +227,25 @@ class HandRenderer : public ICallbacks
 //        Uncomment this to draw to window.
 //        *********************************
 //
-        glBindFramebuffer(GL_READ_FRAMEBUFFER,tileFBO);
-       
-        //Set what color attachment we are reading
-        glReadBuffer(GL_COLOR_ATTACHMENT0);
-       
-        //Set to what attachment we will write
-        //glDrawBuffer(GL_BACK);
-       
-        //This function does the magic of copying your FBO to the default one. 
-        //You could use it to copy only a region of the FBO to another region of the screen
-        //The parameter GL_LINEAR is the function to use in case the FBOs have different sizes.
-        //glBlitFramebuffer(0, 0, renderWidth, renderHeight,
-        //   0, 0, windowWidth, windowHeight,
-        //   GL_COLOR_BUFFER_BIT, GL_LINEAR);
-       
-        //Resets the Draw Buffer to the default one
-        glDrawBuffer(GL_BACK);
-
-        //glutSwapBuffers();
+//        glBindFramebuffer(GL_READ_FRAMEBUFFER,tileFBO);
+//       
+//        //Set what color attachment we are reading
+//        glReadBuffer(GL_COLOR_ATTACHMENT0);
+//       
+//        //Set to what attachment we will write
+//        glDrawBuffer(GL_BACK);
+//       
+//        //This function does the magic of copying your FBO to the default one. 
+//        //You could use it to copy only a region of the FBO to another region of the screen
+//        //The parameter GL_LINEAR is the function to use in case the FBOs have different sizes.
+//        glBlitFramebuffer(0, 0, renderWidth, renderHeight,
+//           0, 0, windowWidth, windowHeight,
+//           GL_COLOR_BUFFER_BIT, GL_LINEAR);
+//       
+//        //Resets the Draw Buffer to the default one
+//        glDrawBuffer(GL_BACK);
+//
+//        glutSwapBuffers();
 
         return GLCheckError();
     }
@@ -364,16 +309,12 @@ class HandRenderer : public ICallbacks
           0, 
           cv::Point() );
 
-//      depthMap = cv::Mat::zeros(bgrImage.size(), CV_8UC1);
       for (int i = 0; i < depthMap.rows; i++)
         for (int j = 0; j < depthMap.cols; j++)
           if (!skin.at<uchar>(i, j))
-            depthMap.at<uint16_t>(i, j) = 0; //dispMap.at<uchar>(i, j);
-//          else
-//            depthMap.at<uint16_t>(i, j) = 10000; //dispMap.at<uchar>(i, j);
+            depthMap.at<uint16_t>(i, j) = 0;
 
       cv::resize(depthMap, depthMap, cv::Size(imageWidth, imageHeight));
-      //imshow("d", depthMap);
     }
 
     void drawBackground()
@@ -428,7 +369,6 @@ class HandRenderer : public ICallbacks
       mesh.renderCylinders(NUM_CYLINDERS, cylinderWVPs, cylinderWVs);
       mesh.renderSpheres(NUM_SPHERES, sphereWVPs, sphereWVs);
       renderShader.unUse();
-
     }
 
     virtual void RenderSceneCB()
@@ -436,19 +376,21 @@ class HandRenderer : public ICallbacks
       for (unsigned int i = 0; i < swarmGenerations; i++)
       {
         makeTiledRendering();
-        // Get scores from rendering
-        vector<double> scores(numTiles);
-        for (unsigned int j = 0; j < numTiles; j++)
-          scores[j] = rand() / double(RAND_MAX);
 
-        scores[0] = 1.0;
+        scorer.loadData(tileRB, depthTexture);
+        vector<double> scores = scorer.calculateScores(swarm.getParticles());
+        // Get scores from rendering
+        //vector<double> scores(numTiles);
+        //or (unsigned int j = 0; j < numTiles; j++)
+        //  scores[j] = rand() / double(RAND_MAX);
+
+        //scores[0] = 1.0;
         swarm.updateSwarm(scores);
       }
       drawHand();
 
       glutSwapBuffers();
       swarm.resetScores();
-        scorer.calculateScores();
 
     }
 
@@ -459,12 +401,10 @@ class HandRenderer : public ICallbacks
 
       processImages(bgrImage, depthImage);
 
-      depthImage = cv::Mat::ones(depthImage.size(), CV_16UC1) * 10000;
       // Generate a number for our textureID's unique handle
       matToTexture(bgrTexture, bgrImage);
       matToTexture(depthTexture, depthImage);
-      
-      copyTextureToFramebuffer(depthTexture, depthFBO);
+
       RenderSceneCB();
     }
 
@@ -477,11 +417,7 @@ class HandRenderer : public ICallbacks
         }
     }
 
-    virtual void TimerCB(int val)
-    {
-//        RenderSceneCB();
-    }
-
+    virtual void TimerCB(int val) {}
     virtual void PassiveMouseCB(int x, int y) {}
     virtual void MouseCB(int Button, int State, int x, int y) {}
     virtual void SpecialKeyboardCB(int Key, int x, int y) {}
@@ -489,7 +425,6 @@ class HandRenderer : public ICallbacks
 private:
     Mesh mesh;
     Shader tileShader, renderShader;
-    Pipeline windowPipeline, renderPipeline;
     cv::VideoCapture capture;
     Histogram skinHist, nonSkinHist;
     Classifier classifier;
@@ -501,8 +436,11 @@ private:
                  windowWidth, windowHeight, \
                  renderWidth, renderHeight, \
                  numTiles, swarmGenerations;
+
+    Pipeline windowPipeline, renderPipeline;
+
     GLuint bgrTexture, depthTexture;
-    GLuint tileFBO, tileRB, depthFBO, depthRB;
+    GLuint tileFBO, tileRB; //, depthFBO, depthRB;
     GLuint tsLocation, tprLocation, npLocation;
     cv::Mat se;
 

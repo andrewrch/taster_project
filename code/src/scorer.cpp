@@ -88,29 +88,19 @@ const char* oclErrorString(cl_int error)
 }
 
 Scorer::Scorer(unsigned int scores, unsigned int clamp, unsigned int width, unsigned int height) : 
-  clObjects(0),
+  clObjects(2),
   depthClamp(clamp),
   numScores(scores),
   imageWidth(width),
   imageHeight(height)
 {
-  arraySize = numScores * sizeof(int);
-  // Do all CL boilerplate stuff
-  printf("Initialize OpenCL object and context\n");
   //setup devices and context
   std::vector<cl::Platform> platforms;
   err = cl::Platform::get(&platforms);
-//  printf("cl::Platform::get(): %s\n", oclErrorString(err));
-  printf("platforms.size(): %lu\n", platforms.size());
-
   deviceUsed = 0;
   err = platforms[0].getDevices(CL_DEVICE_TYPE_GPU, &devices);
-//  printf("getDevices: %s\n", oclErrorString(err));
-  printf("devices.size(): %lu\n", devices.size());
   int t = devices.front().getInfo<CL_DEVICE_TYPE>();
-  int wg = devices.front().getInfo<CL_DEVICE_MAX_WORK_GROUP_SIZE>();
   printf("type: device: %d CL_DEVICE_TYPE_GPU: %d \n", t, CL_DEVICE_TYPE_GPU);
-  cout << "Max work group size: " << wg << endl;
 
   cl_context_properties props[] =
   {
@@ -134,6 +124,13 @@ Scorer::Scorer(unsigned int scores, unsigned int clamp, unsigned int width, unsi
   catch (cl::Error er) {
       printf("ERROR: %s(%d)\n", er.what(), er.err());
   }
+
+  //create the OpenCL only arrays
+  arraySize = numScores * sizeof(unsigned int);
+  differenceBuffer = cl::Buffer(context, CL_MEM_READ_WRITE, arraySize, NULL, &err);
+  unionBuffer = cl::Buffer(context, CL_MEM_READ_WRITE, arraySize, NULL, &err);
+  intersectionBuffer = cl::Buffer(context, CL_MEM_READ_WRITE, arraySize, NULL, &err);
+
 }
 
 Scorer::~Scorer()
@@ -186,43 +183,7 @@ void Scorer::loadProgramFromString(const string& kernel_source)
 	  std::cout << "Build Status: " << program.getBuildInfo<CL_PROGRAM_BUILD_STATUS>(devices[0]) << std::endl;
   	std::cout << "Build Options:\t" << program.getBuildInfo<CL_PROGRAM_BUILD_OPTIONS>(devices[0]) << std::endl;
   	std::cout << "Build Log:\t " << program.getBuildInfo<CL_PROGRAM_BUILD_LOG>(devices[0]) << std::endl;
-}
 
-void Scorer::loadData(GLuint rbo, GLuint dRbo)
-{
-    //make sure OpenGL is finished before we proceed
-    glFinish();
-    printf("gl interop!\n");
-    // create OpenCL buffer from GL VBO
-    try {
-      clObjects.push_back(cl::BufferRenderGL(context, CL_MEM_READ_ONLY, rbo, &err));
-    } catch (cl::Error er) {
-      printf("Renderbuffer 1 fail\n");
-      cout << er.what() << " " << er.err() << endl;
-    }
-    try {
-      clObjects.push_back(cl::BufferRenderGL(context, CL_MEM_READ_ONLY, dRbo, &err));
-    } catch (cl::Error er) {
-      printf("Renderbuffer 2 fail\n");
-      cout << er.what() << " " << er.err() << endl;
-    }
-
-//    try{
-//      clObjects.push_back(cl::Image2DGL(context, CL_MEM_READ_ONLY, GL_TEXTURE_2D, 0, dRbo, &err));
-//    }
-//    catch (cl::Error er) {
-//      cout << "Texture fail" << endl;
-//      cout << er.what() << " " << er.err() << endl;
-//      printf("v_vbo: %s\n", oclErrorString(err)); 
-//    }
-
-    cout << "Objects size: " << clObjects.size() << endl;
-
-    //create the OpenCL only arrays
-    differenceSum = cl::Buffer(context, CL_MEM_READ_WRITE, arraySize, NULL, &err);
-    unionSum = cl::Buffer(context, CL_MEM_READ_WRITE, arraySize, NULL, &err);
-    intersectionSum = cl::Buffer(context, CL_MEM_READ_WRITE, arraySize, NULL, &err);
- 
     //initialize our kernel from the program
     try{
       kernel = cl::Kernel(program, "calculateImageCharacteristics", &err);
@@ -231,49 +192,71 @@ void Scorer::loadData(GLuint rbo, GLuint dRbo)
       printf("ERROR: %s(%s)\n", er.what(), oclErrorString(er.err()));
     }
 
-    //set the arguements of our kernel
+}
+
+void Scorer::loadData(GLuint rbo, GLuint tex)
+{
+    //make sure OpenGL is finished before we proceed
+    glFinish();
+    // create OpenCL buffer from GL VBO
+    try {
+      clObjects[0] = cl::BufferRenderGL(context, CL_MEM_READ_ONLY, rbo, &err);
+    } catch (cl::Error er) {
+      printf("Renderbuffer 1 fail\n");
+      cout << er.what() << " " << er.err() << endl;
+    }
+    try{
+      clObjects[1] = cl::Image2DGL(context, CL_MEM_READ_ONLY, GL_TEXTURE_2D, 0, tex, &err);
+    }
+    catch (cl::Error er) {
+      cout << "Texture fail" << endl;
+      cout << er.what() << " " << er.err() << endl;
+      printf("v_vbo: %s\n", oclErrorString(err)); 
+    }
+
+    //set the arguments of our kernel
     try
     {
       err = kernel.setArg(0, clObjects[0]); // The renderbuffer
       err = kernel.setArg(1, clObjects[1]); // The depth texture
-      err = kernel.setArg(2, differenceSum);
-      err = kernel.setArg(3, unionSum);
-      err = kernel.setArg(4, intersectionSum);
+      err = kernel.setArg(2, differenceBuffer);
+      err = kernel.setArg(3, unionBuffer);
+      err = kernel.setArg(4, intersectionBuffer);
       err = kernel.setArg(5, depthClamp);
       err = kernel.setArg(6, (unsigned int) floor(sqrt(numScores)));
       err = kernel.setArg(7, imageWidth);
       err = kernel.setArg(8, imageHeight);
+
+      err = kernel.setArg(9, 256 * sizeof(cl_uint), NULL);
+      err = kernel.setArg(10, 256 * sizeof(cl_uint), NULL);
+      err = kernel.setArg(11, 256 * sizeof(cl_uint), NULL);
     }
     catch (cl::Error er) {
       printf("ERROR: %s(%s)\n", er.what(), oclErrorString(er.err()));
     }
     //Wait for the command queue to finish these commands before proceeding
     queue.finish();
+
 }
 
-std::vector<double> Scorer::calculateScores()
+double Scorer::getCollisionPenalty(Particle& p)
+{
+  double* params = p.getArray();
+  double  penalty = 0.0f;
+  //for (int i = 0; i < 3; i++)
+  //  penalty += params[
+  return penalty;
+}
+
+std::vector<double> Scorer::calculateScores(std::vector<Particle>& particles)
 {
   // This will calculate the scores for each particle in swarm
   std::vector<double> scores(numScores);
 
-  // Initialise the vectors as zeros
-  std::vector<int> diff(numScores);
-  std::vector<int> Union(numScores); // union keyword already taken :P
-  std::vector<int> intersection(numScores);
+  unsigned int differenceSum[numScores];
+  unsigned int unionSum[numScores];
+  unsigned int intersectionSum[numScores];
 
-  for (unsigned int i = 0; i < numScores; i++)
-  {
-    diff[i] = 0;
-    Union[i] = 0;
-    intersection[i] = 0;
-  }
-
-  //printf("Pushing data to the GPU\n");
-  err = queue.enqueueWriteBuffer(differenceSum, CL_TRUE, 0, arraySize, &diff[0], NULL, &event);
-  err = queue.enqueueWriteBuffer(unionSum, CL_TRUE, 0, arraySize, &Union[0], NULL, &event);
-  err = queue.enqueueWriteBuffer(intersectionSum, CL_TRUE, 0, arraySize, &intersection[0], NULL, &event);
-
-  //cout << "Waiting for GL finish" << endl;
   glFinish();
   try{
     err = queue.enqueueAcquireGLObjects(&clObjects, NULL, &event);
@@ -300,31 +283,30 @@ std::vector<double> Scorer::calculateScores()
       cout << er.what() << " " << er.err() << endl;
   }
 
-  queue.enqueueReadBuffer(differenceSum, CL_TRUE, 0, arraySize, &diff[0]);
-  queue.enqueueReadBuffer(unionSum, CL_TRUE, 0, arraySize, &Union[0]);
-  queue.enqueueReadBuffer(intersectionSum, CL_TRUE, 0, arraySize, &intersection[0]);
+  queue.enqueueReadBuffer(differenceBuffer, CL_TRUE, 0, arraySize, &differenceSum);
+  queue.enqueueReadBuffer(unionBuffer, CL_TRUE, 0, arraySize, &unionSum);
+  queue.enqueueReadBuffer(intersectionBuffer, CL_TRUE, 0, arraySize, &intersectionSum);
   queue.finish();
 
-  //////
-  //// NOW CALCULATE THE SCORES LOL
-  ////
-//  for (unsigned int i = 0; i < numScores; i++)
-//    cout << diff[i] << " ";
-//  cout << endl;
-//
-//  for (unsigned int i = 0; i < numScores; i++)
-//    cout << Union[i] << " ";
-//  cout << endl;
-//
-//  for (unsigned int i = 0; i < numScores; i++)
-//    cout << intersection[i] << " ";
-//  cout << endl;
+  // Calculate scores using formula from paper...
+  float lambda = 20.0f, lambdak = 10.0f;
+  for (unsigned int i = 0; i < numScores; i++)
+  {
+    cout << differenceSum[i] << " " << unionSum[i] << " " <<  intersectionSum[i] << endl;
+    double a = differenceSum[i] / (unionSum[i] + 0.00001f);
+    double b = (1 - ((2 * intersectionSum[i]) / (intersectionSum[i] + unionSum[i])));
 
-  //delete[] output;
+    cout << "a: " << a << " b: " << b << endl;
+//    double k_c = 
+
+    scores[i] = (a + lambda * b);
+  }
+
+  for (int i = 0; i < numScores; i++)
+    cout << "Score " << i << ": " << scores[i] << endl;
 
   //Release the VBOs so OpenGL can play with them
   err = queue.enqueueReleaseGLObjects(&clObjects, NULL, &event);
-  printf("release gl: %s\n", oclErrorString(err));
   queue.finish();
 
   return scores;

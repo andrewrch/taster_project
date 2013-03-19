@@ -199,6 +199,7 @@ class ModelViewer : public ICallbacks
       else if (key >= 'h' && key <= '{')
         handParams[key - 97] += 1.0;
 
+
       // Now handle other key presses
       else
       {
@@ -236,7 +237,9 @@ class ModelViewer : public ICallbacks
         }
 
         pipeline.setTiles(numTiles);
+
       }
+      printf("%f %f\n", handParams['p' - 97], handParams['l' - 97]);
     }
 
     virtual void PassiveMouseCB(int x, int y)

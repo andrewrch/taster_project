@@ -7,6 +7,8 @@
 #include <string>
 #include <CL/cl.hpp>
 
+#include "particle.hpp"
+
 class Scorer {
   public:
     //default constructor initializes OpenCL context 
@@ -20,15 +22,16 @@ class Scorer {
     void loadData(GLuint, GLuint);
     // This does the real work - i.e. runs the kernel and accumulates
     // scores for all renderings
-    std::vector<double> calculateScores();
+    std::vector<double> calculateScores(std::vector<Particle>&);
   private:
 
     void loadProgramFromString(const std::string&);
+    double getCollisionPenalty(Particle&);
 
     std::vector<cl::Memory> clObjects;  // 0: renderbuffer, 1: depth texture
-    cl::Buffer differenceSum; 
-    cl::Buffer unionSum; 
-    cl::Buffer intersectionSum;
+    cl::Buffer differenceBuffer; 
+    cl::Buffer unionBuffer; 
+    cl::Buffer intersectionBuffer;
     unsigned int depthClamp;
     unsigned int numScores;    //the number of particles
     unsigned int imageWidth;

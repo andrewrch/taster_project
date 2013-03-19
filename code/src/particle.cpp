@@ -1,5 +1,6 @@
 #include <cmath>
 #include <time.h>
+#include <iostream>
 #include <stdlib.h>
 #include <stdio.h>
 
@@ -27,13 +28,13 @@ Particle::Particle(unsigned int p, double C1, double C2) :
 //    printf("%f\n", rand()/double(RAND_MAX) * 30);
   }
 
-  position[0] = rand()/double(RAND_MAX)*2; 
-  position[1] = rand()/double(RAND_MAX)*2; 
-  position[2] = rand()/double(RAND_MAX)*2; 
-  //position[3] = rand()/double(RAND_MAX) * 2; 
-  //position[4] = rand()/double(RAND_MAX); 
-  //position[5] = rand()/double(RAND_MAX); 
-  //position[6] = rand()/double(RAND_MAX); 
+  position[0] = rand()/double(RAND_MAX)*4; 
+  position[1] = rand()/double(RAND_MAX)*4; 
+  position[2] = rand()/double(RAND_MAX)*4; 
+  position[3] = rand()/double(RAND_MAX)*4; 
+  position[4] = rand()/double(RAND_MAX) * 10; 
+  position[5] = rand()/double(RAND_MAX) * 10 ; 
+  position[6] = rand()/double(RAND_MAX) * 10; 
 }
 
 Particle& Particle::operator=(const Particle& p)
@@ -51,7 +52,7 @@ Particle& Particle::operator=(const Particle& p)
 
 void Particle::update(double score, Particle best)
 {
-  if (score > bestScore)
+  if (score < bestScore)
   {
     bestScore = score;
     bestPosition = position;
@@ -61,6 +62,8 @@ void Particle::update(double score, Particle best)
   double r2 = rand() / double(RAND_MAX);
   double c1r1 = c1 * r1;
   double c2r2 = c2 * r2;
+
+//  cout << r1 << " " << r2 << endl;
 
   for (unsigned int i = 0; i < velocity.size(); i++)
   {

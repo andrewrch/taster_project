@@ -4,7 +4,7 @@ varying float depth;
 flat in int instanceID;  
 in vec4 colour;
 in vec4 projPos;
-out ivec4 fragColour;
+out vec4 fragColour;
 
 uniform float tileSize;
 uniform unsigned int numPrimitives;
@@ -37,8 +37,8 @@ void main()
     // Use raw nonlinear depth like the Kinect.
     //fragColour = vec4(1.0 - z, 1.0 - z, 1.0 - z, 1.0); //colour;
 
-    //fragColour = ivec4(depth, depth, depth, 1); //colour;
-    fragColour = ivec4(50000, 50000, 50000, 1); //colour;
+    fragColour = vec4(depth, depth, depth, 1); //colour;
+    //fragColour = vec4(50000.0, 50000.0, 50000.0, 1.0); //colour;
     //fragColour = vec4(1, 1, 1, 1); //colour;
   }
 }
