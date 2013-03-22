@@ -1,5 +1,5 @@
 CFLAGS := -g -Wall #-I/opt/AMDAPP/include 
-LDFLAGS := -lm -lGL -lGLEW -lglut -lOpenCL `pkg-config opencv --libs` 
+LDFLAGS := -lm -lGL -lGLEW -lglfw -lglut -lOpenCL `pkg-config opencv --libs` 
 
 all: hand_renderer kinect_viewer model_viewer
 
@@ -8,8 +8,6 @@ hand_renderer:\
 	src/classifier.cpp\
 	src/classifier.hpp\
 	src/cone.hpp\
-	src/glut_backend.cpp\
-	src/glut_backend.hpp\
 	src/hand.cpp\
 	src/hand.hpp\
 	src/hand_renderer.cpp\
@@ -38,8 +36,6 @@ kinect_viewer:\
 	src/classifier.cpp\
 	src/classifier.hpp\
 	src/cone.hpp\
-	src/glut_backend.cpp\
-	src/glut_backend.hpp\
 	src/hand.cpp\
 	src/hand.hpp\
 	src/histogram.cpp\

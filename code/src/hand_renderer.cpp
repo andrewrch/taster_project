@@ -106,9 +106,9 @@ class HandRenderer
       glBindTexture(GL_TEXTURE_2D, 0);
     }
 
-    bool initCameras()
-    bool initShaders()
-    bool initPrimitives()
+    //bool initCameras()
+    //bool initShaders()
+    //bool initPrimitives()
 
     bool init()
     {
@@ -377,8 +377,18 @@ class HandRenderer
     // we should exit
     bool run()
     {
-    virtual void RenderSceneCB()
-    { 
+      if (glfwGetKey(GLFW_KEY_ESC) == GLFW_PRESS)
+        return false;
+
+      cv::Mat depthImage;
+      cv::Mat bgrImage;
+
+      processImages(bgrImage, depthImage);
+
+      // Generate a number for our textureID's unique handle
+      matToTexture(bgrTexture, bgrImage);
+      matToTexture(depthTexture, depthImage);
+
       vector<double> scores;
       for (unsigned int i = 0; i < swarmGenerations; i++)
       {
@@ -390,46 +400,16 @@ class HandRenderer
       }
       drawHand();
 
-      glutSwapBuffers();
+
+      glfwSwapBuffers();
       swarm.resetScores(scores);
-    }
-
-    virtual void IdleCB()
-    {
-      cv::Mat depthImage;
-      cv::Mat bgrImage;
-
-      processImages(bgrImage, depthImage);
-
-      // Generate a number for our textureID's unique handle
-      matToTexture(bgrTexture, bgrImage);
-      matToTexture(depthTexture, depthImage);
-
-      RenderSceneCB();
 
       previousFrame = depthImage.clone();
-    }
-
-    virtual void KeyboardCB(unsigned char Key, int x, int y)
-    {
-        switch (Key) {
-            case 'q':
-                glFinish();
-                scorer.finish();
-                glutLeaveMainLoop();
-                break;
-        }
-    }
-
-
-
 
       return true;
     }
 
-
-
-private:
+  private:
     Mesh mesh;
     Shader tileShader, renderShader;
     cv::VideoCapture capture;
@@ -460,26 +440,41 @@ void shutDown(int returnCode)
 
 int main(int argc, char** argv)
 {
-  // Seed random numbers
+  // First job: Seed random numbers
   srand(time(NULL));
 
   int windowWidth = 640;
   int windowHeight = 480;
 
   // Initialise GLFW
-  if (glfwInit() != GL_TRUE)
+  if (glfwInit() == GL_FALSE)
     shutDown(1);
+
+  // select opengl version 
+  glfwOpenWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);
+  glfwOpenWindowHint(GLFW_OPENGL_VERSION_MAJOR, 4);
+  glfwOpenWindowHint(GLFW_OPENGL_VERSION_MINOR, 2);
+
   // Get a glfw window
-  if (glfwOpenWindow(windowWidth, windowHeight, 0, 0, 0, 0, 0, 0, GLFW_WINDOW) != GL_TRUE)
+  if (glfwOpenWindow(windowWidth, windowHeight, 0, 0, 0, 0, 0, 0, GLFW_WINDOW) == GL_FALSE)
     shutDown(1);
   glfwSetWindowTitle("Hand Renderer");
 
-  HandRenderer app = new HandRenderer(atoi(argv[1]), atoi(argv[2]), 320, 240, argv[3], argv[4]);
+  if (GLEW_OK != glewInit())
+  {
+    shutDown(1);
+  }
+
+  // Tidy up these command line args
+  HandRenderer *app = new HandRenderer(atoi(argv[1]), atoi(argv[2]), 320, 240, argv[3], argv[4]);
 
   if (!app->init()) 
     shutDown(1);
 
-  do {} while (app.run());
+  // Run the main loop until it returns false
+  do {} while (app->run());
 
+  delete app;
+  // Shut down GLFW and exit
   shutDown(0);
 }
