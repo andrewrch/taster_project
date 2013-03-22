@@ -46,7 +46,7 @@ class HandRenderer : public ICallbacks
       classifier(skinHist, nonSkinHist),
       thresholder(0.4, 0.5, 20),
       swarm(particles, NUM_PARAMETERS, c1, c2), 
-      scorer(particles, 20, width, height),
+      scorer(particles, 80, 100, width, height),
       imageWidth(width),
       imageHeight(height),
       windowWidth(WINDOW_WIDTH),
@@ -94,8 +94,12 @@ class HandRenderer : public ICallbacks
         inputType = GL_UNSIGNED_SHORT;
         internalFormat = GL_RGBA16UI;
 
-        imshow("depth", mat * 1000);
-        cvWaitKey(30);
+        mat.at<uint16_t>(cv::Point(200, 100)) = 50000;
+
+//        cv::flip(mat, mat, 0);
+
+//        imshow("depth", mat * 1000);
+//        cvWaitKey(30);
       }
 
 
@@ -116,15 +120,15 @@ class HandRenderer : public ICallbacks
     bool init()
     {
         // Some initial vectors for camera
-        glm::vec3 pos(0.0f, 300.0f, 650.0f);
+        glm::vec3 pos(0.0f, 0.0f, 600.0f);
         glm::vec3 target(0.0f, 0.0f, 0.0f);
         glm::vec3 up(0.0, 1.0f, 0.0f);
 
         float aspect = (float) windowWidth / windowHeight;
         windowPipeline.setCamera(pos, target, up);
-        windowPipeline.setPerspectiveProj(45.6f, aspect, 40.0f, 1000.0f);   
+        windowPipeline.setPerspectiveProj(45.6f, aspect, 40.0f, 10000.0f);   
         renderPipeline.setCamera(pos, target, up);
-        renderPipeline.setPerspectiveProj(45.6f, aspect, 40.0f, 1000.0f);   
+        renderPipeline.setPerspectiveProj(45.6f, aspect, 40.0f, 10000.0f);   
 
         // Get meshes initialised
         mesh.init(0.5f, 50, 50, 0.5f, 1.0f, 20);
@@ -163,7 +167,7 @@ class HandRenderer : public ICallbacks
         glGenTextures(1, &depthTexture);
         glGenTextures(1, &bgrTexture);
         // Initialise texture to blank image (Required for CL interop)
-        cv::Mat blank = cv::Mat::zeros(cv::Size(640, 480), CV_16UC1);
+        cv::Mat blank = cv::Mat::zeros(cv::Size(imageWidth, imageHeight), CV_16UC1);
         matToTexture(depthTexture, blank);
         blank = cv::Mat::zeros(cv::Size(640, 480), CV_8UC3);
         matToTexture(bgrTexture, blank);
@@ -179,6 +183,7 @@ class HandRenderer : public ICallbacks
         // Structure element for morphology whatsit
         se = cv::Mat::zeros(cv::Size(5, 5), CV_8UC1);
         cv::circle(se, cv::Point(3, 3), 2, cv::Scalar(255), -1);
+        previousFrame = cv::Mat(cv::Size(imageWidth, imageHeight), CV_16UC1);
 
         return true;
     }
@@ -270,7 +275,7 @@ class HandRenderer : public ICallbacks
       cv::Mat yuvImage;
       cv::cvtColor(bgrBlurred, yuvImage, CV_BGR2YCrCb);
       cv::Mat prob = classifier.classifyImage(yuvImage);
-      cv::Mat skin = thresholder.thresholdImage(prob, depthMap, validPixels); 
+      cv::Mat skin = thresholder.thresholdImage(prob, depthMap, validPixels, previousFrame); 
 
       cv::morphologyEx(skin, skin, cv::MORPH_CLOSE, se);
       cv::morphologyEx(skin, skin, cv::MORPH_DILATE, se);
@@ -372,26 +377,20 @@ class HandRenderer : public ICallbacks
     }
 
     virtual void RenderSceneCB()
-    {   
+    { 
+      vector<double> scores;
       for (unsigned int i = 0; i < swarmGenerations; i++)
       {
         makeTiledRendering();
 
         scorer.loadData(tileRB, depthTexture);
-        vector<double> scores = scorer.calculateScores(swarm.getParticles());
-        // Get scores from rendering
-        //vector<double> scores(numTiles);
-        //or (unsigned int j = 0; j < numTiles; j++)
-        //  scores[j] = rand() / double(RAND_MAX);
-
-        //scores[0] = 1.0;
+        scores = scorer.calculateScores(swarm.getParticles());
         swarm.updateSwarm(scores);
       }
       drawHand();
 
       glutSwapBuffers();
-      swarm.resetScores();
-
+      swarm.resetScores(scores);
     }
 
     virtual void IdleCB()
@@ -406,12 +405,16 @@ class HandRenderer : public ICallbacks
       matToTexture(depthTexture, depthImage);
 
       RenderSceneCB();
+
+      previousFrame = depthImage.clone();
     }
 
     virtual void KeyboardCB(unsigned char Key, int x, int y)
     {
         switch (Key) {
             case 'q':
+                glFinish();
+                scorer.finish();
                 glutLeaveMainLoop();
                 break;
         }
@@ -443,6 +446,7 @@ private:
     GLuint tileFBO, tileRB; //, depthFBO, depthRB;
     GLuint tsLocation, tprLocation, npLocation;
     cv::Mat se;
+    cv::Mat previousFrame;
 
 };
 
@@ -453,9 +457,14 @@ int main(int argc, char** argv)
 
     GLUTBackendInit(argc, argv);
 
+//    if (!GLUTBackendCreateWindow(WINDOW_WIDTH, WINDOW_HEIGHT, 32, false, "Tiled Renderer")) {
+//        return 1;
+//    }
+//
     if (!GLUTBackendCreateWindow(WINDOW_WIDTH, WINDOW_HEIGHT, 32, false, "Hand Renderer")) {
         return 1;
     }
+
     
     HandRenderer* app = new HandRenderer(atoi(argv[1]), atoi(argv[2]), 320, 240, argv[3], argv[4]);
 
@@ -463,7 +472,6 @@ int main(int argc, char** argv)
         return 1;
     }
 
-    
     app->run();
     delete app;
     return 0;

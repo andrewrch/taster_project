@@ -12,13 +12,17 @@ Thresholder::Thresholder(float min, float max, float depth) :
 {
 }
 
-cv::Mat Thresholder::thresholdImage(cv::Mat& i, cv::Mat& depth, cv::Mat& valid)
+cv::Mat Thresholder::thresholdImage(cv::Mat& i, cv::Mat& depth, cv::Mat& valid, cv::Mat& prev)
 {
-  vector<cv::Point> seeds = findSeeds(i);
+  vector<cv::Point> seeds = findSeeds(i, depth, valid, prev);
   return findNeighbours(seeds, i, depth, valid);
 }
 
-vector<cv::Point> Thresholder::findSeeds(cv::Mat& image)
+vector<cv::Point> Thresholder::findSeeds(
+    cv::Mat& image, 
+    cv::Mat& depth,
+    cv::Mat& valid, 
+    cv::Mat& prev)
 {
   vector<cv::Point> seeds;
   // Scan through whole image
@@ -26,7 +30,9 @@ vector<cv::Point> Thresholder::findSeeds(cv::Mat& image)
     for (register int col = 0; col < image.cols; col++)
     {
       // Check whether seed with classifier
-      if (image.at<float>(row, col) > tMax)
+      if (image.at<float>(row, col) > tMax ||
+          (valid.at<uchar>(row, col) &&  depth.at<uint16_t>(row, col) < 2000 &&
+          (abs(prev.at<uint16_t>(row, col) - depth.at<uint16_t>(row, col) < tDepth))))
         	// Add seed to vector
         	seeds.push_back(cv::Point(col, row));
     }
@@ -70,7 +76,7 @@ void Thresholder::checkNeighbours(cv::Mat& visited,
 
     // Check with classifier whether it is a neighbour
     if (image.at<float>(row, col) > tMin || 
-       (valid.at<uchar>(row, col) && abs(depthImage.at<uint16_t>(row, col) - depth) < tDepth && depthImage.at<uint16_t>(row, col) < 1000 && image.at<float>(row, col) > tMin/2 ))
+       (valid.at<uchar>(row, col) && abs(depthImage.at<uint16_t>(row, col) - depth) < tDepth && depthImage.at<uint16_t>(row, col) < 2000 && image.at<float>(row, col) > tMin/4 ))
     {
       // Set as skin
       skinImage.at<uint8_t>(row, col) = 255;

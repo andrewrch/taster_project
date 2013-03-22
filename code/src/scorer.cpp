@@ -87,9 +87,10 @@ const char* oclErrorString(cl_int error)
 
 }
 
-Scorer::Scorer(unsigned int scores, unsigned int clamp, unsigned int width, unsigned int height) : 
+Scorer::Scorer(unsigned int scores, unsigned int _dM, unsigned int _dm, unsigned int width, unsigned int height) : 
   clObjects(2),
-  depthClamp(clamp),
+  dm(_dm),
+  dM(_dM),
   numScores(scores),
   imageWidth(width),
   imageHeight(height)
@@ -222,14 +223,15 @@ void Scorer::loadData(GLuint rbo, GLuint tex)
       err = kernel.setArg(2, differenceBuffer);
       err = kernel.setArg(3, unionBuffer);
       err = kernel.setArg(4, intersectionBuffer);
-      err = kernel.setArg(5, depthClamp);
-      err = kernel.setArg(6, (unsigned int) floor(sqrt(numScores)));
-      err = kernel.setArg(7, imageWidth);
-      err = kernel.setArg(8, imageHeight);
+      err = kernel.setArg(5, dm);
+      err = kernel.setArg(6, dM);
+      err = kernel.setArg(7, (unsigned int) floor(sqrt(numScores)));
+      err = kernel.setArg(8, imageWidth);
+      err = kernel.setArg(9, imageHeight);
 
-      err = kernel.setArg(9, 256 * sizeof(cl_uint), NULL);
       err = kernel.setArg(10, 256 * sizeof(cl_uint), NULL);
       err = kernel.setArg(11, 256 * sizeof(cl_uint), NULL);
+      err = kernel.setArg(12, 256 * sizeof(cl_uint), NULL);
     }
     catch (cl::Error er) {
       printf("ERROR: %s(%s)\n", er.what(), oclErrorString(er.err()));
@@ -243,8 +245,6 @@ double Scorer::getCollisionPenalty(Particle& p)
 {
   double* params = p.getArray();
   double  penalty = 0.0f;
-  //for (int i = 0; i < 3; i++)
-  //  penalty += params[
   return penalty;
 }
 
@@ -256,8 +256,8 @@ std::vector<double> Scorer::calculateScores(std::vector<Particle>& particles)
   unsigned int differenceSum[numScores];
   unsigned int unionSum[numScores];
   unsigned int intersectionSum[numScores];
-
   glFinish();
+
   try{
     err = queue.enqueueAcquireGLObjects(&clObjects, NULL, &event);
   } catch (cl::Error er)
@@ -282,6 +282,7 @@ std::vector<double> Scorer::calculateScores(std::vector<Particle>& particles)
       cout << "Queue fail" << endl;
       cout << er.what() << " " << er.err() << endl;
   }
+  queue.finish();
 
   queue.enqueueReadBuffer(differenceBuffer, CL_TRUE, 0, arraySize, &differenceSum);
   queue.enqueueReadBuffer(unionBuffer, CL_TRUE, 0, arraySize, &unionSum);
@@ -292,18 +293,10 @@ std::vector<double> Scorer::calculateScores(std::vector<Particle>& particles)
   float lambda = 20.0f, lambdak = 10.0f;
   for (unsigned int i = 0; i < numScores; i++)
   {
-    cout << differenceSum[i] << " " << unionSum[i] << " " <<  intersectionSum[i] << endl;
-    double a = differenceSum[i] / (unionSum[i] + 0.00001f);
-    double b = (1 - ((2 * intersectionSum[i]) / (intersectionSum[i] + unionSum[i])));
-
-    cout << "a: " << a << " b: " << b << endl;
-//    double k_c = 
-
+    double a = (double) differenceSum[i] / (unionSum[i] + 0.00001f);
+    double b = (1 - ((double) (2 * intersectionSum[i]) / (intersectionSum[i] + unionSum[i])));
     scores[i] = (a + lambda * b);
   }
-
-  for (int i = 0; i < numScores; i++)
-    cout << "Score " << i << ": " << scores[i] << endl;
 
   //Release the VBOs so OpenGL can play with them
   err = queue.enqueueReleaseGLObjects(&clObjects, NULL, &event);

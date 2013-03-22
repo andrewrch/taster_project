@@ -27,17 +27,12 @@ void main()
   // Otherwise colour with greyscale depth colour
   else
   {
-    //float z = (projPos.z/projPos.w + 1.0f) / 2.0f;
-    //float n = 40.0f; // camera z near
-    //float f = 1000.0f; // camera z far
-    //float z_e = (n * z) / ( f - z * (f - n) );
+//    if (x < 0.125 && y < 0.125)
+//      fragColour = vec4(50000.0, 50000.0, 50000.0, 1.0); //colour;
+//    else
+//      discard;
+      fragColour = vec4(depth, depth, depth, 1); //colour;
 
-    //fragColour = vec4(z_e, z_e, z_e, 1.0); //colour;
-    //
-    // Use raw nonlinear depth like the Kinect.
-    //fragColour = vec4(1.0 - z, 1.0 - z, 1.0 - z, 1.0); //colour;
-
-    fragColour = vec4(depth, depth, depth, 1); //colour;
     //fragColour = vec4(50000.0, 50000.0, 50000.0, 1.0); //colour;
     //fragColour = vec4(1, 1, 1, 1); //colour;
   }

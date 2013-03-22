@@ -1,5 +1,8 @@
-#include "particleswarm.hpp"
+#include <float.h>
 #include <stdio.h>
+#include <algorithm>
+
+#include "particleswarm.hpp"
 
 using namespace std;
 
@@ -20,8 +23,9 @@ ParticleSwarm::ParticleSwarm(
 void ParticleSwarm::updateSwarm(vector<double> scores)
 {
   for (unsigned int i = 0; i < scores.size(); i++)
-    if (scores[i] > bestScore)
+    if (scores[i] < bestScore)
     {
+
       bestScore = scores[i];
       bestParticle = particles[i];
     }
@@ -30,10 +34,24 @@ void ParticleSwarm::updateSwarm(vector<double> scores)
     particles[i].update(scores[i], bestParticle);
 }
 
-void ParticleSwarm::resetScores()
+void ParticleSwarm::resetScores(vector<double> scores)
 { 
-  bestScore = 0.0;
+  int bestP = 0;
+  double bestS = DBL_MAX;
+  for (int i = 0; i < scores.size(); i++)
+  {
+    if (scores[i] < bestS)
+    {
+      bestS = scores[i];
+      bestP = i;
+    }
+  }
+
+  bestScore = DBL_MAX;
   for (unsigned int i = 0; i < particles.size(); i++)
-    particles[i].resetScore();
+    if (i != bestP)
+      particles[i] = particles[i].getPerturbation();
+    else
+      particles[i].resetScore();
 }
 

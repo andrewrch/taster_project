@@ -1,6 +1,8 @@
 #ifndef PARTICLE_H
 #define PARTICLE_H
 
+#include <float.h>
+
 #include <vector>
 
 class Particle
@@ -15,7 +17,8 @@ class Particle
     void update(double score, Particle);
 
     // So swarm can be reused each frame
-    void resetScore() { bestScore = 0.0; };
+    void resetScore() { bestScore = DBL_MAX; };
+    Particle getPerturbation();
 
   private:
     // Holds all information about current particle

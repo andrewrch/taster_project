@@ -1,10 +1,11 @@
 __kernel void calculateImageCharacteristics (
-                       __read_only image2d_t tiledRender, // The tiled rendering
-                       __read_only image2d_t depthImage,  // The depth image (observation)
+                       __read_only image2d_t tiledRender,         // The tiled rendering
+                       __read_only image2d_t depthImage,          // The depth image (observation)
                        __global unsigned int* differenceSum,      // Depth difference 
                        __global unsigned int* unionSum,           // Union of skin image and render
                        __global unsigned int* intersectionSum,    // intersection of skin image and render
-                       unsigned int dM,                   // Max depth for clamping
+                       unsigned int dm,                           // tolerance for difference in depths 
+                       unsigned int dM,                           // Max depth for clamping
                        int numImagesInRow,
                        unsigned int width,
                        unsigned int height,
@@ -38,17 +39,16 @@ __kernel void calculateImageCharacteristics (
     for (int y = 0; y < patchSizeY; y++)
     {
       int2 rendCoords = (int2) (rCoordBase.x + x, rCoordBase.y + y);
-      int2 imageCoords = (int2) (iCoordBase.x + x, iCoordBase.y + y);
+      int2 imageCoords = (int2) (width - (iCoordBase.x + x), height - (iCoordBase.y + y));
 
       uint4 depthVal = read_imageui(depthImage, sampler, imageCoords);
       uint4 renderVal = convert_uint4(read_imagef(tiledRender, sampler, rendCoords));
 
-      int diff = depthVal.x - renderVal.x;
+      int diff = abs_diff(depthVal.x, renderVal.x);
+
       diffSum += (diff < dM) ? diff : dM;
-      if (renderVal.x > 0 || depthVal.x > 0)
-        unSum++;
-      if (renderVal.x > 0 && depthVal.x > 0)
-        intSum++;
+      if (diff < dm || depthVal.x == 0) unSum++;
+      if (diff < dm && depthVal.x > 0) intSum++;
     }
 
     unsigned int localPos = patchY * (width/patchSizeX) + patchX;

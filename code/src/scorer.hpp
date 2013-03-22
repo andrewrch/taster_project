@@ -12,7 +12,7 @@
 class Scorer {
   public:
     //default constructor initializes OpenCL context 
-    Scorer(unsigned int, unsigned int, unsigned int, unsigned int);
+    Scorer(unsigned int, unsigned int, unsigned int, unsigned int, unsigned int);
     //default destructor releases OpenCL objects and frees device memory
     ~Scorer();
     //load an OpenCL program from a given filename
@@ -23,6 +23,9 @@ class Scorer {
     // This does the real work - i.e. runs the kernel and accumulates
     // scores for all renderings
     std::vector<double> calculateScores(std::vector<Particle>&);
+
+    // This just waits for everything to finish...
+    void finish() { queue.finish(); };
   private:
 
     void loadProgramFromString(const std::string&);
@@ -32,7 +35,7 @@ class Scorer {
     cl::Buffer differenceBuffer; 
     cl::Buffer unionBuffer; 
     cl::Buffer intersectionBuffer;
-    unsigned int depthClamp;
+    unsigned int dm, dM;
     unsigned int numScores;    //the number of particles
     unsigned int imageWidth;
     unsigned int imageHeight;

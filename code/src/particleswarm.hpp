@@ -21,7 +21,7 @@ class ParticleSwarm
 
     // So we can reuse particle swarm from previous
     // generation
-    void resetScores();
+    void resetScores(std::vector<double>);
 
   private:
     double bestScore;

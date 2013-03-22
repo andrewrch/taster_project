@@ -8,10 +8,12 @@
 
 using namespace std;
 
+
+
 Particle::Particle(unsigned int p, double C1, double C2) :
   position(p),
   velocity(p),
-  bestScore(0.0),
+  bestScore(DBL_MAX),
   bestPosition(p),
   c1(C1),
   c2(C2)
@@ -24,17 +26,23 @@ Particle::Particle(unsigned int p, double C1, double C2) :
   {
     // Velocity always starts as 0
     velocity[i] = 0;
-    position[i] = rand() % 60 - 30; 
-//    printf("%f\n", rand()/double(RAND_MAX) * 30);
+    position[i] = 0;
   }
+}
 
-  position[0] = rand()/double(RAND_MAX)*4; 
-  position[1] = rand()/double(RAND_MAX)*4; 
-  position[2] = rand()/double(RAND_MAX)*4; 
-  position[3] = rand()/double(RAND_MAX)*4; 
-  position[4] = rand()/double(RAND_MAX) * 10; 
-  position[5] = rand()/double(RAND_MAX) * 10 ; 
-  position[6] = rand()/double(RAND_MAX) * 10; 
+Particle Particle::getPerturbation()
+{
+  Particle pert(position.size(), c1, c2);
+
+  for (int i = 0; i < 3; i++)
+    pert.position[i] = position[i] + rand()/double(RAND_MAX) * 10;
+
+  for (int i = 3; i < 7; i++)
+    pert.position[i] = position[i] + rand()/double(RAND_MAX) * 0.2;
+
+//  for (int i = 7; i < position.size(); i++)
+//   pert.position[i] = position[i] + rand()/double(RAND_MAX) * 10;
+  return pert;
 }
 
 Particle& Particle::operator=(const Particle& p)
@@ -58,20 +66,24 @@ void Particle::update(double score, Particle best)
     bestPosition = position;
   }
 
-  double r1 = rand() / double(RAND_MAX);
-  double r2 = rand() / double(RAND_MAX);
-  double c1r1 = c1 * r1;
-  double c2r2 = c2 * r2;
+  double r1, r2, c1r1, c2r2;
 
 //  cout << r1 << " " << r2 << endl;
 
-  for (unsigned int i = 0; i < velocity.size(); i++)
+  //printf("Velocity: ");
+  for (unsigned int i = 0; i < 7; i++) //velocity.size(); i++)
   {
+
+    r1 = rand() / double(RAND_MAX);
+    r2 = rand() / double(RAND_MAX);
+    c1r1 = c1 * r1;
+    c2r2 = c2 * r2;
     velocity[i] = k * (velocity[i] + c1r1 * (bestPosition[i] - position[i]) + \
                                      c2r2 * (best.getArray()[i] - position[i]));
 
-//    printf("%f\n", velocity[i]);
+//    printf("%f ", velocity[i]);
 
     position[i] = position[i] + velocity[i];
   }
+//  printf("\n");
 }
