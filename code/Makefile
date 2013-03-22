@@ -4,7 +4,6 @@ LDFLAGS := -lm -lGL -lGLEW -lglut -lOpenCL `pkg-config opencv --libs`
 all: hand_renderer kinect_viewer model_viewer
 
 hand_renderer:\
-	src/blob.hpp\
 	src/callbacks.h\
 	src/classifier.cpp\
 	src/classifier.hpp\
@@ -35,7 +34,6 @@ hand_renderer:\
 		g++ -o $@ $(filter %.cpp,$^) $(CFLAGS) $(LDFLAGS)
 
 kinect_viewer:\
-	src/blob.hpp\
 	src/callbacks.h\
 	src/classifier.cpp\
 	src/classifier.hpp\

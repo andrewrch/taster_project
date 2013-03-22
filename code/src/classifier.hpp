@@ -2,7 +2,6 @@
 #define CLASSIFIER_H
 
 #include "histogram.hpp"
-#include "blob.hpp"
 
 class Classifier
 {
