@@ -56,8 +56,6 @@ kinect_viewer:\
 	src/thresholder.hpp\
 	src/util.h\
 	src/kinect_viewer.cpp \
-	src/depthmasker.cpp \
-	src/depthmasker.hpp \
 	Makefile
 		g++ -o $@ $(filter %.cpp,$^) $(CFLAGS) $(LDFLAGS)
 
