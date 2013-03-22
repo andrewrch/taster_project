@@ -8,11 +8,7 @@ hand_renderer:\
 	src/callbacks.h\
 	src/classifier.cpp\
 	src/classifier.hpp\
-	src/componentlabeller.cpp\
-	src/componentlabeller.hpp\
 	src/cone.hpp\
-	src/disjointset.cpp\
-	src/disjointset.hpp\
 	src/glut_backend.cpp\
 	src/glut_backend.hpp\
 	src/hand.cpp\
@@ -43,11 +39,7 @@ kinect_viewer:\
 	src/callbacks.h\
 	src/classifier.cpp\
 	src/classifier.hpp\
-	src/componentlabeller.cpp\
-	src/componentlabeller.hpp\
 	src/cone.hpp\
-	src/disjointset.cpp\
-	src/disjointset.hpp\
 	src/glut_backend.cpp\
 	src/glut_backend.hpp\
 	src/hand.cpp\

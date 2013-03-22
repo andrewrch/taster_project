@@ -4,8 +4,6 @@
 #include "histogram.hpp"
 #include "thresholder.hpp"
 #include "classifier.hpp"
-#include "componentlabeller.hpp"
-#include "depthmasker.hpp"
 
 using namespace std;
 
@@ -70,25 +68,6 @@ int main( int argc, char* argv[] ){
 //    for( int i = 0; i< contours.size(); i++ )
     cv::drawContours( drawing, contours, biggestContour, cv::Scalar(255), CV_FILLED, 8, hierarchy, 0, cv::Point() );
 
-//    cv::Mat labels = labeller.connectedComponentLabelling(skin);
-//    cv::Mat labels = labeller.connectedComponentLabelling(con);
-//    vector<Blob> blobs = labeller.createBlobVector(labels);
-//
-//    // Get largest blob
-//    int maxBlobSize = 0;
-//    Blob* maxBlob;
-//    for (vector<Blob>::iterator it = blobs.begin(); it < blobs.end(); ++it)
-//      if (it->getSize() > maxBlobSize)
-//      {
-//        maxBlobSize = it->getSize();
-//        maxBlob = &(*it);
-//      }
-//
-//    cv::Mat depthMask = masker.maskImage(depthMap, validPixels, maxBlob->getPoints());
-//
-//    //cv::morphologyEx(depthMask, depthMask, cv::MORPH_DILATE, se);
-//    cv::morphologyEx(depthMask, depthMask, cv::MORPH_CLOSE, se);
-//
     cv::Mat maskedDepth = cv::Mat::zeros(bgrImage.size(), CV_8UC1);
 
     for (int i = 0; i < depthMap.rows; i++)
