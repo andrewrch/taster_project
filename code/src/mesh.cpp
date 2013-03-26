@@ -17,6 +17,9 @@
 
 #include <assert.h>
 #include <cmath>
+#include <iostream>
+#include <stdlib.h>
+
 #include "mesh.hpp"
 
 using namespace std;
@@ -32,7 +35,7 @@ Mesh::Mesh() :
   VAO(0),
   entries(NUMBER_OF_PRIMITIVES)
 {
-    ZERO_MEM(buffers);
+//  memset(buffers, 0, sizeof(buffers));
 }
 
 Mesh::~Mesh()
@@ -42,14 +45,14 @@ Mesh::~Mesh()
 
 void Mesh::clear()
 {
-    if (buffers[0] != 0) {
-        glDeleteBuffers(ARRAY_SIZE_IN_ELEMENTS(buffers), buffers);
-    }
-       
-    if (VAO != 0) {
-        glDeleteVertexArrays(1, &VAO);
-        VAO = 0;
-    }
+  if (buffers[0] != 0) {
+    glDeleteBuffers(sizeof(buffers)/sizeof(buffers[0]), buffers);
+  }
+     
+  if (VAO != 0) {
+    glDeleteVertexArrays(1, &VAO);
+    VAO = 0;
+  }
 }
 
 bool Mesh::init(
@@ -68,7 +71,7 @@ bool Mesh::init(
     glBindVertexArray(VAO);
     
     // Create the buffers for the vertices attributes
-    glGenBuffers(ARRAY_SIZE_IN_ELEMENTS(buffers), buffers);
+    glGenBuffers(sizeof(buffers)/sizeof(buffers[0]), buffers);
     // Create entries for all primitives used for modelling
     entries.resize(NUMBER_OF_PRIMITIVES);
     // Vectors to hold all data about primitives
@@ -176,7 +179,8 @@ bool Mesh::init(
 
     // Make sure the VAO is not changed from the outside
     glBindVertexArray(0);	
-    return GLCheckError();
+    //return GLCheckError();
+    return true;
 }
 
 

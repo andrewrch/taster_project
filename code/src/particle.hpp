@@ -14,7 +14,7 @@ class Particle
     Particle& operator=(const Particle&);
 
     // Gets the particle as an array of doubles
-    double* getArray() { return &position[0]; };
+    inline double* getArray() { return &position[0]; };
 
     // Updates the particle given its score, and the
     // best particle in the swarm

@@ -20,48 +20,6 @@
 
 #include "pipeline.hpp"
 
-const glm::mat4& Pipeline::getVTrans()
-{
-  glm::mat4 cameraTrans;
 
-  cameraTrans = glm::lookAt(camera.pos, camera.target, camera.up);
-    
-  VTransformation = cameraTrans;
-  return VTransformation;
-}
-
-const glm::mat4& Pipeline::getVPTrans()
-{
-  glm::mat4 cameraTrans, projTrans;
-
-  cameraTrans = glm::lookAt(camera.pos, camera.target, camera.up);
-  projTrans = glm::perspective(
-      perspectiveProj.fovy, 
-      perspectiveProj.aspect, 
-      perspectiveProj.zNear,
-      perspectiveProj.zFar);
-    
-  VPTransformation = projTrans * cameraTrans;
-
-  return VPTransformation;
-}
-
-const glm::mat4& Pipeline::getTileTrans(unsigned int i)
-{
-  getVPTrans();
-  
-  glm::mat4 scaleTrans, translateTrans;
-  // Tiles are row major
-  int x = sqrt(numTiles);
-  float scale = 1.0 / x;
-  scaleTrans = glm::scale(scaleTrans, glm::vec3(scale, scale, 1.0f));
-  float xTrans = -1.0f + (2.0 * scale * (i % x)) + scale;
-  float yTrans = -1.0f + (2.0 * scale * (i / x)) + scale;
-  float zTrans = -0.0f;
-  translateTrans = glm::translate(translateTrans, glm::vec3(xTrans, yTrans, zTrans));
-
-  tileTransformation = translateTrans * scaleTrans * VPTransformation;
-  return tileTransformation;
-}
 
 

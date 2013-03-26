@@ -51,14 +51,14 @@ class ModelViewer : public ICallbacks
         mesh.init(0.5f, 50, 50, 0.5f, 1.0f, 20);
 
         // Load shaders from file
-        handShader.loadFromFile(GL_VERTEX_SHADER, "./src/shaders/hand_vs.glslv");
-        handShader.loadFromFile(GL_FRAGMENT_SHADER, "./src/shaders/hand_fs.glslf");
+        handShader.loadFromFile(GL_VERTEX_SHADER, "./src/shaders/hand.glslv");
+        handShader.loadFromFile(GL_FRAGMENT_SHADER, "./src/shaders/hand.glslf");
         // Compile and then link the shaders
         handShader.createAndLinkProgram();
 
         // Load shaders from file
-        tileShader.loadFromFile(GL_VERTEX_SHADER, "./src/shaders/tile_vs.glslv");
-        tileShader.loadFromFile(GL_FRAGMENT_SHADER, "./src/shaders/tile_fs.glslf");
+        tileShader.loadFromFile(GL_VERTEX_SHADER, "./src/shaders/tile.glslv");
+        tileShader.loadFromFile(GL_FRAGMENT_SHADER, "./src/shaders/tile.glslf");
         // Compile and then link the shaders
         tileShader.createAndLinkProgram();
 
@@ -162,11 +162,6 @@ class ModelViewer : public ICallbacks
     }
 
     virtual void IdleCB()
-    {
-        RenderSceneCB();
-    }
-
-    virtual void TimerCB(int val)
     {
         RenderSceneCB();
     }

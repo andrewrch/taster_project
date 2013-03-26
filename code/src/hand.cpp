@@ -6,8 +6,8 @@
 #include "hand.hpp"
 #include "cone.hpp"
 
-const double Hand::diameters[] = {18.0, 20.0, 18.0, 12.0, 20.0};
-const double Hand::lengths[] = {35.0, 40.0, 35.0, 30.0, 40.0};
+const double Hand::diameters[] = {18.0, 20.0, 18.0, 15.0, 20.0};
+const double Hand::lengths[] = {35.0, 40.0, 35.0, 25.0, 25.0};
 
 Hand::Hand(double params[NUM_PARAMETERS]) :
   // Initialise vectors with 0 length for push_back
@@ -36,48 +36,6 @@ Hand::Hand(double params[NUM_PARAMETERS]) :
 
 Hand::~Hand()
 {
-}
-
-void Hand::addToTileArrays(
-    glm::mat4* spheres,
-    glm::mat4* cylinders,
-    unsigned int tile,
-    Pipeline& p)
-{
-  glm::mat4 t = p.getTileTrans(tile);
-  for (unsigned int i = 0; i < NUM_SPHERES; i++)
-    spheres[tile * NUM_SPHERES + i] = t * sphereWVPs[i];
-
-  for (unsigned int i = 0; i < NUM_CYLINDERS; i++)
-    cylinders[tile * NUM_CYLINDERS + i] = t * cylinderWVPs[i];
-}
-
-void Hand::addToWVPArrays(
-    glm::mat4* spheres,
-    glm::mat4* cylinders,
-    unsigned int tile,
-    Pipeline& p)
-{
-  glm::mat4 t = p.getVPTrans();
-  for (unsigned int i = 0; i < NUM_SPHERES; i++)
-    spheres[tile * NUM_SPHERES + i] = t * sphereWVPs[i];
-
-  for (unsigned int i = 0; i < NUM_CYLINDERS; i++)
-    cylinders[tile * NUM_CYLINDERS + i] = t * cylinderWVPs[i];
-}
-
-void Hand::addToWVArrays(
-    glm::mat4* spheres,
-    glm::mat4* cylinders,
-    unsigned int tile,
-    Pipeline& p)
-{
-  glm::mat4 t = p.getVTrans();
-  for (unsigned int i = 0; i < NUM_SPHERES; i++)
-    spheres[tile * NUM_SPHERES + i] = t * sphereWVPs[i];
-
-  for (unsigned int i = 0; i < NUM_CYLINDERS; i++)
-    cylinders[tile * NUM_CYLINDERS + i] = t * cylinderWVPs[i];
 }
 
 void Hand::initialiseHand(double params[NUM_PARAMETERS])
@@ -133,11 +91,14 @@ glm::mat4 Hand::initialiseJoint(
   s = glm::scale(glm::mat4(1.0f), glm::vec3(diameter, length, diameter));
   // Shift because cylinder doesn't start at origin
   t = glm::translate(glm::mat4(1.0f), glm::vec3(0.0f, length/2, 0.0f));
-  if (zRot < 0) zRot = 0;
-  if (xRot > 40) xRot = 40;
-  else if (xRot < -40) xRot = -40;
 
-  glm::quat o(glm::vec3(glm::radians(zRot), 0.0f, glm::radians(xRot)));
+  // Basic constraints
+  if (zRot < 0) zRot = 0;
+  else if (zRot > M_PI/2) zRot = M_PI/2;
+  if (xRot > M_PI/4) xRot = M_PI/4;
+  else if (xRot < -M_PI/4) xRot = -M_PI/4;
+
+  glm::quat o(glm::vec3(zRot, 0.0f, xRot));
   glm::gtc::quaternion::normalize(o);
   r = glm::toMat4(o);
   c = cone(coneRatio);
@@ -191,7 +152,7 @@ void Hand::initialiseFinger(
       coneRatio);
 
   diameter *= coneRatio;
-  length *= lengthUpdate;
+//  length *= lengthUpdate;
 
   current = initialiseJoint(
       current, 
@@ -232,25 +193,25 @@ void Hand::initialiseThumb(
   double diameter = diameters[THUMB];
   double length = lengths[THUMB];
   // Ball of thumb
-  s = glm::scale(glm::mat4(1.0f), glm::vec3(2.0f, 3.0f, 1.5f));
-  t = glm::translate(glm::mat4(1.0f), glm::vec3(0.5f, 0.0f, -0.6f));
+  s = glm::scale(glm::mat4(1.0f), glm::vec3(diameter * 1.5, palmScale.y, palmScale.z));
+  t = glm::translate(glm::mat4(1.0f), glm::vec3(palmScale.x / 8, -0.5, palmScale.z / 4));
   // First translate sphere so it rotates about different axis.
   it = glm::translate(glm::mat4(1.0f), glm::vec3(0.0f, 0.3f, 0.0f));
   glm::quat o(glm::vec3(
-        glm::radians(params[getParamPos(THUMB, ROT_1X)] + 15.0), 
+        params[getParamPos(THUMB, ROT_1X)] + M_PI/8,
         0.0f, 
-        glm::radians(params[getParamPos(THUMB, ROT_1Z)] + 35.0)));
+        params[getParamPos(THUMB, ROT_1Z)] + M_PI/6));
   o = glm::gtc::quaternion::normalize(o);
   r = glm::toMat4(o);
   current = start * t * r;
   sphereWVPs.push_back(current * s * it);
 
   // Sphere where thumb joins the ball
-  t = glm::translate(glm::mat4(1.0f), glm::vec3(0.0f, 2.0f, 0.0f));
+  t = glm::translate(glm::mat4(1.0f), glm::vec3(0.0f, palmScale.y - diameter, 0.0f));
   s = glm::scale(glm::mat4(1.0f), glm::vec3(diameter, diameter, diameter));
 
   // Rotate so thumb movements are along the correct axis
-  o = glm::quat(glm::vec3(0.0f, glm::radians(90.0f), 0.0f));
+  o = glm::quat(glm::vec3(0.0f, M_PI/2, 0.0f));
   o = glm::gtc::quaternion::normalize(o);
   r = glm::toMat4(o);
 
@@ -266,7 +227,7 @@ void Hand::initialiseThumb(
       coneRatio);
 
   diameter *= coneRatio;
-  length *= lengthUpdate;
+  //length *= lengthUpdate;
 
   current = initialiseJoint(
       current, 

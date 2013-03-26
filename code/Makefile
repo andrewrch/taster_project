@@ -1,10 +1,9 @@
-CFLAGS := -g -Wall #-I/opt/AMDAPP/include 
+CFLAGS := -O4 -g -Wall -I/opt/AMDAPP/include
 LDFLAGS := -lm -lGL -lGLEW -lglfw -lglut -lOpenCL `pkg-config opencv --libs` 
 
 all: hand_renderer kinect_viewer model_viewer
 
 hand_renderer:\
-	src/callbacks.h\
 	src/classifier.cpp\
 	src/classifier.hpp\
 	src/cone.hpp\
@@ -27,12 +26,10 @@ hand_renderer:\
 	src/particle.hpp\
 	src/particleswarm.hpp\
 	src/particleswarm.cpp\
-	src/util.h\
 	Makefile
 		g++ -o $@ $(filter %.cpp,$^) $(CFLAGS) $(LDFLAGS)
 
 kinect_viewer:\
-	src/callbacks.h\
 	src/classifier.cpp\
 	src/classifier.hpp\
 	src/cone.hpp\
@@ -48,15 +45,14 @@ kinect_viewer:\
 	src/shader.hpp\
 	src/thresholder.cpp\
 	src/thresholder.hpp\
-	src/util.h\
 	src/kinect_viewer.cpp \
 	Makefile
 		g++ -o $@ $(filter %.cpp,$^) $(CFLAGS) $(LDFLAGS)
 
 model_viewer:\
  	src/model_viewer.cpp \
- 	src/glut_backend.hpp \
- 	src/glut_backend.cpp \
+	src/glut_backend.hpp \
+	src/glut_backend.cpp \
  	src/pipeline.hpp \
  	src/pipeline.cpp \
  	src/shader.hpp \

@@ -1,4 +1,4 @@
-#version 330
+#version 410
 
 varying float depth;
 flat in int instanceID;  

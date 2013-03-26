@@ -53,16 +53,18 @@ class HandRenderer
       numTiles(particles),
       swarmGenerations(generations),
       windowPipeline(windowWidth, windowHeight, numTiles),
-      renderPipeline(renderWidth, renderHeight, numTiles)
+      renderPipeline(renderWidth, renderHeight, numTiles),
+      frameCount(0),
+      started(false)
     {
     }
 
     ~HandRenderer() {
+      glFinish();
       glDeleteFramebuffers(1,&tileFBO);
       glDeleteRenderbuffers(1,&tileRB);
     	glDeleteTextures(1, &bgrTexture);
     	glDeleteTextures(1, &depthTexture);
-      glFinish();
     }   
 
     // Function turn a cv::Mat into a texture
@@ -112,6 +114,13 @@ class HandRenderer
 
     bool init()
     {
+      // OpenGL initialisation
+      glClearColor(0.0f, 0.0f, 0.0f, 0.0f);
+      glFrontFace(GL_CW);
+      glCullFace(GL_BACK);
+      glEnable(GL_CULL_FACE);
+      glEnable(GL_DEPTH_TEST);
+
       // Some initial vectors for camera
       glm::vec3 pos(0.0f, 0.0f, 600.0f);
       glm::vec3 target(0.0f, 0.0f, 0.0f);
@@ -130,35 +139,38 @@ class HandRenderer
       mesh.init(0.5f, 50, 50, 0.5f, 1.0f, 20);
 
       // Load shaders for tiled rendering
-      tileShader.loadFromFile(GL_VERTEX_SHADER, "./src/shaders/tile_vs.glslv");
-      tileShader.loadFromFile(GL_FRAGMENT_SHADER, "./src/shaders/tile_fs.glslf");
+      tileShader.loadFromFile(GL_VERTEX_SHADER, "./src/shaders/tile.glslv");
+      tileShader.loadFromFile(GL_FRAGMENT_SHADER, "./src/shaders/tile.glslf");
       tileShader.createAndLinkProgram();
       tsLocation = tileShader.addUniform("tileSize");
       tprLocation = tileShader.addUniform("tilesPerRow");
       npLocation = tileShader.addUniform("numPrimitives");
 
-      // Load shaders for display render
-      renderShader.loadFromFile(GL_VERTEX_SHADER, "./src/shaders/hand_vs.glslv");
-      renderShader.loadFromFile(GL_FRAGMENT_SHADER, "./src/shaders/hand_fs.glslf");
-      // Compile and then link the shaders
-      renderShader.createAndLinkProgram();
+      // Load shaders for hand
+      handShader.loadFromFile(GL_VERTEX_SHADER, "./src/shaders/hand.glslv");
+      handShader.loadFromFile(GL_FRAGMENT_SHADER, "./src/shaders/hand.glslf");
+      handShader.createAndLinkProgram();
+
+      // Load shader to draw background image
+      backgroundShader.loadFromFile(GL_VERTEX_SHADER, "./src/shaders/background.glslv");
+      backgroundShader.loadFromFile(GL_FRAGMENT_SHADER, "./src/shaders/background.glslf");
+      backgroundShader.createAndLinkProgram();
+      backgroundTexLocation = backgroundShader.addUniform("textureSampler");
 
       glGenFramebuffers(1,&tileFBO);
-      glGenRenderbuffers(1,&tileRB);
       glBindFramebuffer(GL_FRAMEBUFFER, tileFBO);
+      glGenRenderbuffers(1,&tileRB);
       glBindRenderbuffer(GL_RENDERBUFFER, tileRB);
+      cout << "Render width: " << renderWidth << " height: " << renderHeight << endl;
       glRenderbufferStorage(GL_RENDERBUFFER, GL_RGBA32F, renderWidth, renderHeight);
       glFramebufferRenderbuffer(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_RENDERBUFFER, tileRB);
 
       glBindFramebuffer(GL_FRAMEBUFFER, 0);
-      glBindRenderbuffer(GL_RENDERBUFFER, 0);
 
       GLenum status;
-      status = glCheckFramebufferStatusEXT( GL_FRAMEBUFFER );
-      if( status != GL_FRAMEBUFFER_COMPLETE )
-        fprintf( stderr, "FrameBuffer is not complete.\n" );
-
-      glBindFramebuffer(GL_FRAMEBUFFER, 0);
+      status = glCheckFramebufferStatus(GL_FRAMEBUFFER);
+      if(status != GL_FRAMEBUFFER_COMPLETE)
+        fprintf(stderr, "FrameBuffer is not complete.\n");
 
       glGenTextures(1, &depthTexture);
       glGenTextures(1, &bgrTexture);
@@ -167,6 +179,8 @@ class HandRenderer
       matToTexture(depthTexture, blank);
       blank = cv::Mat::zeros(cv::Size(640, 480), CV_8UC3);
       matToTexture(bgrTexture, blank);
+
+      initBackground();
 
       // OpenCL interop stuff here
       scorer.loadProgram("./src/kernels/distancekernel.cl");
@@ -183,7 +197,7 @@ class HandRenderer
       return true;
     }
 
-    bool makeTiledRendering()
+    void makeTiledRendering()
     {
       glm::mat4 sphereWVPs[NUM_SPHERES * numTiles];
       glm::mat4 cylinderWVPs[NUM_CYLINDERS * numTiles];
@@ -240,9 +254,7 @@ class HandRenderer
 //        //Resets the Draw Buffer to the default one
 //        glDrawBuffer(GL_BACK);
 //
-//        glutSwapBuffers();
-
-        return GLCheckError();
+//        glfwSwapBuffers();
     }
 
     void processImages(cv::Mat& bgrImage, cv::Mat& depthMap)
@@ -259,7 +271,7 @@ class HandRenderer
 
       cv::Mat bgrBlurred = bgrImage.clone();
       //cv::medianBlur(yuvImage, yuvImage, 3);
-      cv::GaussianBlur(bgrImage, bgrBlurred, cv::Size(25, 25), 1.5);
+      //cv::GaussianBlur(bgrImage, bgrBlurred, cv::Size(25, 25), 1.5);
 
       // Do processing with them
       cv::Mat yuvImage;
@@ -313,33 +325,60 @@ class HandRenderer
       cv::resize(depthMap, depthMap, cv::Size(imageWidth, imageHeight));
     }
 
+    void initBackground()
+    {
+      static const GLfloat squareVertices[] = {
+      -1.0f, -1.0f,
+      1.0f,  1.0f,
+      1.0f, -1.0f,
+      -1.0f, -1.0f,
+      -1.0f,  1.0f,
+      1.0f,  1.0f};
+
+      static const GLfloat texCoords[] = {
+        1.0, 1.0,
+        0.0, 0.0,
+        0.0, 1.0,
+        1.0, 1.0, 
+        1.0, 0.0,
+        0.0, 0.0};
+
+      glGenVertexArrays(1, &backgroundVAO);
+      glBindVertexArray(backgroundVAO);
+
+      glGenBuffers(1, &backgroundVertices);
+      glBindBuffer(GL_ARRAY_BUFFER, backgroundVertices);
+      glBufferData(GL_ARRAY_BUFFER, sizeof(squareVertices), squareVertices, GL_STATIC_DRAW);
+
+      glGenBuffers(1, &backgroundTexcoords);
+      glBindBuffer(GL_ARRAY_BUFFER, backgroundTexcoords);
+      glBufferData(GL_ARRAY_BUFFER, sizeof(texCoords), texCoords, GL_STATIC_DRAW);
+      glBindVertexArray(0);
+    }
+
     void drawBackground()
     {
-        glEnable(GL_TEXTURE_2D);
-        glBindTexture(GL_TEXTURE_2D, bgrTexture);
-        glDepthMask(GL_FALSE);
-        glBegin (GL_TRIANGLES);
-          glTexCoord2f (1.0, 1.0);
-          glVertex2f (-1.0, -1.0);
+      // Turn off depth writes so background is always drawn behind
+      glDepthMask(GL_FALSE);
+      // Load background shader
+      backgroundShader.use();
+      glActiveTexture(GL_TEXTURE0);
+      glBindTexture(GL_TEXTURE_2D, bgrTexture);
+      glUniform1i(backgroundTexLocation, 0);
 
-          glTexCoord2f (0.0, 0.0);
-          glVertex2f (1.0, 1.0);
-
-          glTexCoord2f (0.0, 1.0);
-          glVertex2f (1.0, -1.0);
-
-          glTexCoord2f (1.0, 1.0);
-          glVertex2f (-1.0, -1.0);
-
-          glTexCoord2f (1.0, 0.0);
-          glVertex2f (-1.0, 1.0);
-
-          glTexCoord2f (0.0, 0.0);
-          glVertex2f (1.0, 1.0);
-        glEnd ();
-        glDepthMask(GL_TRUE);
-        glBindTexture(GL_TEXTURE_2D, 0);
-        glDisable(GL_TEXTURE_2D);
+      glBindVertexArray(backgroundVAO);
+      glEnableVertexAttribArray(0);
+      glBindBuffer(GL_ARRAY_BUFFER, backgroundVertices);
+      glVertexAttribPointer(0, 2, GL_FLOAT, GL_FALSE, 0, (void*)0);
+      glEnableVertexAttribArray(1);
+      glBindBuffer(GL_ARRAY_BUFFER, backgroundTexcoords);
+      glVertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE, 0, (void*)0);
+      glDrawArrays(GL_TRIANGLES, 0, 6);
+      glDisableVertexAttribArray(0);
+      glDisableVertexAttribArray(1);
+      glBindVertexArray(0);
+      backgroundShader.unUse();
+      glDepthMask(GL_TRUE);
     }
 
     void drawHand()
@@ -366,10 +405,10 @@ class HandRenderer
       h.addToWVArrays(sphereWVs, cylinderWVs, 0, windowPipeline);
 
       // And then render the model using the mesh functions
-      renderShader.use();
+      handShader.use();
       mesh.renderCylinders(NUM_CYLINDERS, cylinderWVPs, cylinderWVs);
       mesh.renderSpheres(NUM_SPHERES, sphereWVPs, sphereWVs);
-      renderShader.unUse();
+      handShader.unUse();
     }
 
     // This function is the main work loop.
@@ -390,28 +429,61 @@ class HandRenderer
       matToTexture(depthTexture, depthImage);
 
       vector<double> scores;
-      for (unsigned int i = 0; i < swarmGenerations; i++)
+
+      // If the users hand hasn't moved in to an acceptable 
+      // position, keep waiting
+      if (!started)
       {
         makeTiledRendering();
-
-        scorer.loadData(tileRB, depthTexture);
+        scorer.setTexture(depthTexture);
         scores = scorer.calculateScores(swarm.getParticles());
-        swarm.updateSwarm(scores);
+        for (unsigned int i = 0; i < scores.size(); i++)
+          if (scores[i] < 21.0f)
+            started = true;
+        // Draw hand as a hint of where user should be putting theirs
+        drawHand();
       }
-      drawHand();
+      else
+      {
+        for (unsigned int i = 0; i < swarmGenerations; i++)
+        {
+          // Disturb half of the particles
+          if (!(i % 3))
+          {
+            // For half of the particles
+            for (unsigned int j = 0; j < numTiles / 2; j++)
+            {
+              // Choose random particle
+              unsigned int particle = rand() % numTiles;
+              // Choose random joint (Add 7 so ignore global pos/orientation)
+              unsigned int joint = (rand() % (NUM_PARAMETERS - 7)) + 7;
 
+//              cout << "Particle: " << particle << " joint: " << joint << endl;
+              swarm.getParticles()[particle].getArray()[joint] += (rand()/(double(RAND_MAX)/2) - 1) * M_PI/10;
+            }
+          }
+          makeTiledRendering();
+          // For some reason texture needs setting every
+          // frame TODO Find out why!
+          scorer.setTexture(depthTexture);
+          scores = scorer.calculateScores(swarm.getParticles());
+          swarm.updateSwarm(scores);
+        }
+
+        drawHand();
+        swarm.resetScores(scores);
+        previousFrame = depthImage.clone();
+      }
 
       glfwSwapBuffers();
-      swarm.resetScores(scores);
-
-      previousFrame = depthImage.clone();
-
+      // Update frame count
+      frameCount++;
       return true;
     }
 
   private:
     Mesh mesh;
-    Shader tileShader, renderShader;
+    Shader tileShader, handShader, backgroundShader;
     cv::VideoCapture capture;
     Histogram skinHist, nonSkinHist;
     Classifier classifier;
@@ -429,7 +501,15 @@ class HandRenderer
     GLuint bgrTexture, depthTexture;
     GLuint tileFBO, tileRB; 
     GLuint tsLocation, tprLocation, npLocation;
+
+    GLuint backgroundVAO, backgroundTexcoords, backgroundVertices, backgroundTexLocation;
     cv::Mat se, previousFrame;
+
+    unsigned int frameCount;
+
+    // This is toggled when the hand moves into an acceptable
+    // starting position
+    bool started;
 };
 
 void shutDown(int returnCode)
@@ -451,25 +531,30 @@ int main(int argc, char** argv)
     shutDown(1);
 
   // select opengl version 
-  glfwOpenWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);
+  glfwOpenWindowHint(GLFW_FSAA_SAMPLES, 4);
   glfwOpenWindowHint(GLFW_OPENGL_VERSION_MAJOR, 4);
-  glfwOpenWindowHint(GLFW_OPENGL_VERSION_MINOR, 2);
+  glfwOpenWindowHint(GLFW_OPENGL_VERSION_MINOR, 1);
+  glfwOpenWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);
 
   // Get a glfw window
-  if (glfwOpenWindow(windowWidth, windowHeight, 0, 0, 0, 0, 0, 0, GLFW_WINDOW) == GL_FALSE)
+  if (glfwOpenWindow(windowWidth, windowHeight, 0, 0, 0, 0, 24, 0, GLFW_WINDOW) == GL_FALSE)
     shutDown(1);
   glfwSetWindowTitle("Hand Renderer");
 
-  if (GLEW_OK != glewInit())
-  {
+  int major, minor, rev;
+  glfwGetGLVersion(&major, &minor, &rev);
+  fprintf(stderr, "OpenGL version received: %d.%d.%d\n", major, minor, rev);
+
+  if (glewInit() != GLEW_OK)
     shutDown(1);
-  }
 
   // Tidy up these command line args
-  HandRenderer *app = new HandRenderer(atoi(argv[1]), atoi(argv[2]), 320, 240, argv[3], argv[4]);
+  HandRenderer *app = new HandRenderer(atoi(argv[1]), atoi(argv[2]), 640, 480, argv[3], argv[4]);
 
   if (!app->init()) 
     shutDown(1);
+
+  glfwEnable(GLFW_STICKY_KEYS);
 
   // Run the main loop until it returns false
   do {} while (app->run());

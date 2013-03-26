@@ -35,6 +35,8 @@ __kernel void calculateImageCharacteristics (
   int2 iCoordBase = (int2) (patchX * patchSizeX,  
                              patchY * patchSizeY);
   // Now iterate over each pixel in the patch
+//  printf("addresses %x %x \n", depthImage, tiledRender);
+//  bool cat = true;
   for (int x = 0; x < patchSizeX; x++)
     for (int y = 0; y < patchSizeY; y++)
     {
@@ -43,6 +45,12 @@ __kernel void calculateImageCharacteristics (
 
       uint4 depthVal = read_imageui(depthImage, sampler, imageCoords);
       uint4 renderVal = convert_uint4(read_imagef(tiledRender, sampler, rendCoords));
+
+//      if (depthVal.x > 0 && cat)
+//      {
+//        printf("coords: %d %d, depth: %u\n", imageCoords.x, imageCoords.y, depthVal.x);
+//        cat = false;
+//      }
 
       int diff = abs_diff(depthVal.x, renderVal.x);
 

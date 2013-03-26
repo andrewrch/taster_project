@@ -16,23 +16,66 @@ class Hand
   public:
     Hand(double[NUM_PARAMETERS]);
     // Push this hand into arrays for instanced rendering
-    void addToTileArrays(
-        glm::mat4*,         // Spheres
-        glm::mat4*,         // Cylinders
-        unsigned int,       // Tile number
-        Pipeline&);          // Pipeline for (Tile)VP info
+//    inline void addToTileArrays(
+//        glm::mat4*,         // Spheres
+//        glm::mat4*,         // Cylinders
+//        unsigned int,       // Tile number
+//        Pipeline&);         // Pipeline for (Tile)VP info
+//
+//    inline void addToWVPArrays(
+//        glm::mat4*,         // Spheres
+//        glm::mat4*,         // Cylinders
+//        unsigned int,       // Tile number
+//        Pipeline&);         // Pipeline for VP info
+//
+//    inline void addToWVArrays(
+//        glm::mat4*,         // Spheres
+//        glm::mat4*,         // Cylinders
+//        unsigned int,       // Tile number
+//        Pipeline&);         // Pipeline for VP info
 
-    void addToWVPArrays(
-        glm::mat4*,         // Spheres
-        glm::mat4*,         // Cylinders
-        unsigned int,       // Tile number
-        Pipeline&);         // Pipeline for VP info
+    inline void addToTileArrays(
+        glm::mat4* spheres,
+        glm::mat4* cylinders,
+        unsigned int tile,
+        Pipeline& p)
+    {
+      glm::mat4 t = p.getTileTrans(tile);
+      for (unsigned int i = 0; i < NUM_SPHERES; i++)
+        spheres[tile * NUM_SPHERES + i] = t * sphereWVPs[i];
 
-    void addToWVArrays(
-        glm::mat4*,         // Spheres
-        glm::mat4*,         // Cylinders
-        unsigned int,       // Tile number
-        Pipeline&);         // Pipeline for VP info
+      for (unsigned int i = 0; i < NUM_CYLINDERS; i++)
+        cylinders[tile * NUM_CYLINDERS + i] = t * cylinderWVPs[i];
+    }
+
+    inline void addToWVPArrays(
+        glm::mat4* spheres,
+        glm::mat4* cylinders,
+        unsigned int tile,
+        Pipeline& p)
+    {
+      glm::mat4 t = p.getVPTrans();
+      for (unsigned int i = 0; i < NUM_SPHERES; i++)
+        spheres[tile * NUM_SPHERES + i] = t * sphereWVPs[i];
+
+      for (unsigned int i = 0; i < NUM_CYLINDERS; i++)
+        cylinders[tile * NUM_CYLINDERS + i] = t * cylinderWVPs[i];
+    }
+
+    inline void addToWVArrays(
+        glm::mat4* spheres,
+        glm::mat4* cylinders,
+        unsigned int tile,
+        Pipeline& p)
+    {
+      glm::mat4 t = p.getVTrans();
+      for (unsigned int i = 0; i < NUM_SPHERES; i++)
+        spheres[tile * NUM_SPHERES + i] = t * sphereWVPs[i];
+
+      for (unsigned int i = 0; i < NUM_CYLINDERS; i++)
+        cylinders[tile * NUM_CYLINDERS + i] = t * cylinderWVPs[i];
+    }
+
 
     ~Hand();
   private:
@@ -82,7 +125,7 @@ class Hand
       thumbPos;
 
     // Gets 
-    unsigned int getParamPos(unsigned int digit, unsigned int offset)
+    inline unsigned int getParamPos(unsigned int digit, unsigned int offset)
     {
       return 4 * (digit+1) + 3 + offset;
     }

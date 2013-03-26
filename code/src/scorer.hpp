@@ -24,6 +24,8 @@ class Scorer {
     // scores for all renderings
     std::vector<double> calculateScores(std::vector<Particle>&);
 
+    void setTexture(GLuint);
+
     // This just waits for everything to finish...
     void finish() { queue.finish(); };
   private:

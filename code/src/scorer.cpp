@@ -3,6 +3,7 @@
 #include <iostream>
 #include <fstream>
 #include <cmath>
+#include <algorithm>
 
 #include <GL/glx.h>
 
@@ -136,7 +137,6 @@ Scorer::Scorer(unsigned int scores, unsigned int _dM, unsigned int _dm, unsigned
 
 Scorer::~Scorer()
 {
-  queue.finish();
 }
 
 void Scorer::loadProgram(const string& filename){
@@ -207,7 +207,7 @@ void Scorer::loadData(GLuint rbo, GLuint tex)
       cout << er.what() << " " << er.err() << endl;
     }
     try{
-      clObjects[1] = cl::Image2DGL(context, CL_MEM_READ_ONLY, GL_TEXTURE_2D, 0, tex, &err);
+      clObjects[1] = cl::ImageGL(context, CL_MEM_READ_ONLY, GL_TEXTURE_2D, 0, tex, &err);
     }
     catch (cl::Error er) {
       cout << "Texture fail" << endl;
@@ -228,23 +228,43 @@ void Scorer::loadData(GLuint rbo, GLuint tex)
       err = kernel.setArg(7, (unsigned int) floor(sqrt(numScores)));
       err = kernel.setArg(8, imageWidth);
       err = kernel.setArg(9, imageHeight);
-
-      err = kernel.setArg(10, 256 * sizeof(cl_uint), NULL);
-      err = kernel.setArg(11, 256 * sizeof(cl_uint), NULL);
-      err = kernel.setArg(12, 256 * sizeof(cl_uint), NULL);
+      err = kernel.setArg(10, 192 * sizeof(cl_uint), NULL);
+      err = kernel.setArg(11, 192 * sizeof(cl_uint), NULL);
+      err = kernel.setArg(12, 192 * sizeof(cl_uint), NULL);
     }
     catch (cl::Error er) {
       printf("ERROR: %s(%s)\n", er.what(), oclErrorString(er.err()));
     }
     //Wait for the command queue to finish these commands before proceeding
-    queue.finish();
+    //queue.finish();
 
+}
+
+void Scorer::setTexture(GLuint tex)
+{
+  try{
+    clObjects[1] = cl::ImageGL(context, CL_MEM_READ_ONLY, GL_TEXTURE_2D, 0, tex, &err);
+  }
+  catch (cl::Error er) {
+    cout << "Texture fail" << endl;
+    cout << er.what() << " " << er.err() << endl;
+    printf("v_vbo: %s\n", oclErrorString(err)); 
+  }
+  err = kernel.setArg(1, clObjects[1]); // The depth texture
 }
 
 double Scorer::getCollisionPenalty(Particle& p)
 {
   double* params = p.getArray();
   double  penalty = 0.0f;
+
+  // For each of the 3 pairs of fingers...
+  for (int i = 0; i < 3; i++)
+  {
+    double j = params[4*(i + 1)+3] - params[4 * (i + 2)+3];
+    penalty -= min<double>(j, 0.0);
+  }
+
   return penalty;
 }
 
@@ -256,6 +276,7 @@ std::vector<double> Scorer::calculateScores(std::vector<Particle>& particles)
   unsigned int differenceSum[numScores];
   unsigned int unionSum[numScores];
   unsigned int intersectionSum[numScores];
+
   glFinish();
 
   try{
@@ -265,6 +286,9 @@ std::vector<double> Scorer::calculateScores(std::vector<Particle>& particles)
       cout << "Aquire fail" << endl;
       cout << er.what() << " " << er.err() << endl;
   }
+  // Wait for GL aquisition
+  //event.wait();
+//  clReleaseMemObject(event);
 
   // Bit of a hack made from this GPU, but can have max 256
   // work items, so since image is always 4:3, use 192 (16*12)
@@ -276,18 +300,19 @@ std::vector<double> Scorer::calculateScores(std::vector<Particle>& particles)
   cl::NDRange global(sqrt(numScores) * w, sqrt(numScores) * h);
   cl::NDRange local(w, h);
   try {
-    err = queue.enqueueNDRangeKernel(kernel, cl::NullRange, global, local);
+    err = queue.enqueueNDRangeKernel(kernel, cl::NullRange, global, local, NULL, &event);
   } catch (cl::Error er)
   {
       cout << "Queue fail" << endl;
       cout << er.what() << " " << er.err() << endl;
   }
-  queue.finish();
+  event.wait();
 
-  queue.enqueueReadBuffer(differenceBuffer, CL_TRUE, 0, arraySize, &differenceSum);
-  queue.enqueueReadBuffer(unionBuffer, CL_TRUE, 0, arraySize, &unionSum);
-  queue.enqueueReadBuffer(intersectionBuffer, CL_TRUE, 0, arraySize, &intersectionSum);
-  queue.finish();
+  std::vector<cl::Event> events(3);
+  queue.enqueueReadBuffer(differenceBuffer, CL_TRUE, 0, arraySize, &differenceSum, NULL, &events[0]);
+  queue.enqueueReadBuffer(unionBuffer, CL_TRUE, 0, arraySize, &unionSum, NULL, &events[1]);
+  queue.enqueueReadBuffer(intersectionBuffer, CL_TRUE, 0, arraySize, &intersectionSum, NULL, &events[2]);
+  cl::Event::waitForEvents(events);
 
   // Calculate scores using formula from paper...
   float lambda = 20.0f, lambdak = 10.0f;
@@ -295,13 +320,15 @@ std::vector<double> Scorer::calculateScores(std::vector<Particle>& particles)
   {
     double a = (double) differenceSum[i] / (unionSum[i] + 0.00001f);
     double b = (1 - ((double) (2 * intersectionSum[i]) / (intersectionSum[i] + unionSum[i])));
-    scores[i] = (a + lambda * b);
+    scores[i] = (a + lambda * b) + lambdak * getCollisionPenalty(particles[i]);
   }
+
+//  for (int i = 0; i < numScores; i++)
+//    cout << scores[i] << " ";
+//  cout << endl;
 
   //Release the VBOs so OpenGL can play with them
   err = queue.enqueueReleaseGLObjects(&clObjects, NULL, &event);
-  queue.finish();
-
+  event.wait();
   return scores;
-
 }

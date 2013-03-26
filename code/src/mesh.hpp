@@ -27,7 +27,7 @@
 #include <GL/glew.h>
 #include <glm/glm.hpp>
 
-#include "util.h"
+//#include "util.h"
 
 class Mesh
 {
@@ -87,7 +87,7 @@ class Mesh
 
     GLuint VAO;
     GLuint axes;
-    GLuint buffers[4];
+    GLuint buffers[5];
 
     // We hold both primitives in same vertex
     // array and use BaseVertex call so require
