@@ -4,97 +4,31 @@
 #include <fstream>
 #include <cmath>
 #include <algorithm>
-
 #include <GL/glx.h>
-
 #include "scorer.hpp"
 
 using namespace std;
 
-const char* oclErrorString(cl_int error)
-{
-    static const char* errorString[] = {
-        "CL_SUCCESS",
-        "CL_DEVICE_NOT_FOUND",
-        "CL_DEVICE_NOT_AVAILABLE",
-        "CL_COMPILER_NOT_AVAILABLE",
-        "CL_MEM_OBJECT_ALLOCATION_FAILURE",
-        "CL_OUT_OF_RESOURCES",
-        "CL_OUT_OF_HOST_MEMORY",
-        "CL_PROFILING_INFO_NOT_AVAILABLE",
-        "CL_MEM_COPY_OVERLAP",
-        "CL_IMAGE_FORMAT_MISMATCH",
-        "CL_IMAGE_FORMAT_NOT_SUPPORTED",
-        "CL_BUILD_PROGRAM_FAILURE",
-        "CL_MAP_FAILURE",
-        "",
-        "",
-        "",
-        "",
-        "",
-        "",
-        "",
-        "",
-        "",
-        "",
-        "",
-        "",
-        "",
-        "",
-        "",
-        "",
-        "",
-        "CL_INVALID_VALUE",
-        "CL_INVALID_DEVICE_TYPE",
-        "CL_INVALID_PLATFORM",
-        "CL_INVALID_DEVICE",
-        "CL_INVALID_CONTEXT",
-        "CL_INVALID_QUEUE_PROPERTIES",
-        "CL_INVALID_COMMAND_QUEUE",
-        "CL_INVALID_HOST_PTR",
-        "CL_INVALID_MEM_OBJECT",
-        "CL_INVALID_IMAGE_FORMAT_DESCRIPTOR",
-        "CL_INVALID_IMAGE_SIZE",
-        "CL_INVALID_SAMPLER",
-        "CL_INVALID_BINARY",
-        "CL_INVALID_BUILD_OPTIONS",
-        "CL_INVALID_PROGRAM",
-        "CL_INVALID_PROGRAM_EXECUTABLE",
-        "CL_INVALID_KERNEL_NAME",
-        "CL_INVALID_KERNEL_DEFINITION",
-        "CL_INVALID_KERNEL",
-        "CL_INVALID_ARG_INDEX",
-        "CL_INVALID_ARG_VALUE",
-        "CL_INVALID_ARG_SIZE",
-        "CL_INVALID_KERNEL_ARGS",
-        "CL_INVALID_WORK_DIMENSION",
-        "CL_INVALID_WORK_GROUP_SIZE",
-        "CL_INVALID_WORK_ITEM_SIZE",
-        "CL_INVALID_GLOBAL_OFFSET",
-        "CL_INVALID_EVENT_WAIT_LIST",
-        "CL_INVALID_EVENT",
-        "CL_INVALID_OPERATION",
-        "CL_INVALID_GL_OBJECT",
-        "CL_INVALID_BUFFER_SIZE",
-        "CL_INVALID_MIP_LEVEL",
-        "CL_INVALID_GLOBAL_WORK_SIZE",
-    };
+const char* oclErrorString(cl_int);
 
-    const int errorCount = sizeof(errorString) / sizeof(errorString[0]);
-
-    const int index = -error;
-
-    return (index >= 0 && index < errorCount) ? errorString[index] : "";
-
-}
-
-Scorer::Scorer(unsigned int scores, unsigned int _dM, unsigned int _dm, unsigned int width, unsigned int height) : 
+Scorer::Scorer(
+    unsigned int scores, 
+    double l, 
+    double lk, 
+    unsigned int _dM, 
+    unsigned int _dm, 
+    unsigned int width, 
+    unsigned int height) : 
   clObjects(2),
+  finalScores(scores),
   dm(_dm),
   dM(_dM),
+  lambda(l),
+  lambdak(lk),
   numScores(scores),
   imageWidth(width),
-  imageHeight(height)
+  imageHeight(height),
+  readEvents(3)
 {
   //setup devices and context
   std::vector<cl::Platform> platforms;
@@ -102,8 +36,18 @@ Scorer::Scorer(unsigned int scores, unsigned int _dM, unsigned int _dm, unsigned
   deviceUsed = 0;
   err = platforms[0].getDevices(CL_DEVICE_TYPE_GPU, &devices);
   int t = devices.front().getInfo<CL_DEVICE_TYPE>();
-  printf("type: device: %d CL_DEVICE_TYPE_GPU: %d \n", t, CL_DEVICE_TYPE_GPU);
+  maxWorkGroupSize = devices.front().getInfo<CL_DEVICE_MAX_WORK_GROUP_SIZE>();
+  printf("Device type: %d CL_DEVICE_TYPE_GPU: %d \n", t, CL_DEVICE_TYPE_GPU);
+  printf("Max work group size on GPU: %u\n", maxWorkGroupSize);
 
+  // Then calculate the dimensions of the 2D work group
+  maxWorkGroupWidth = (unsigned int) floor(sqrt(maxWorkGroupSize));
+  // Calculate local and global range of the kernel given max work group size
+  globalRange = cl::NDRange(sqrt(numScores) * maxWorkGroupWidth, 
+                            sqrt(numScores) * maxWorkGroupWidth);
+  localRange = cl::NDRange(maxWorkGroupWidth, maxWorkGroupWidth);
+
+  // Linux specific
   cl_context_properties props[] =
   {
       CL_GL_CONTEXT_KHR, (cl_context_properties)glXGetCurrentContext(),
@@ -135,9 +79,7 @@ Scorer::Scorer(unsigned int scores, unsigned int _dM, unsigned int _dm, unsigned
 
 }
 
-Scorer::~Scorer()
-{
-}
+Scorer::~Scorer() {}
 
 void Scorer::loadProgram(const string& filename){
   ifstream fp;
@@ -228,16 +170,13 @@ void Scorer::loadData(GLuint rbo, GLuint tex)
       err = kernel.setArg(7, (unsigned int) floor(sqrt(numScores)));
       err = kernel.setArg(8, imageWidth);
       err = kernel.setArg(9, imageHeight);
-      err = kernel.setArg(10, 192 * sizeof(cl_uint), NULL);
-      err = kernel.setArg(11, 192 * sizeof(cl_uint), NULL);
-      err = kernel.setArg(12, 192 * sizeof(cl_uint), NULL);
+      err = kernel.setArg(10, maxWorkGroupSize * sizeof(cl_uint), NULL);
+      err = kernel.setArg(11, maxWorkGroupSize * sizeof(cl_uint), NULL);
+      err = kernel.setArg(12, maxWorkGroupSize * sizeof(cl_uint), NULL);
     }
     catch (cl::Error er) {
       printf("ERROR: %s(%s)\n", er.what(), oclErrorString(er.err()));
     }
-    //Wait for the command queue to finish these commands before proceeding
-    //queue.finish();
-
 }
 
 void Scorer::setTexture(GLuint tex)
@@ -253,6 +192,7 @@ void Scorer::setTexture(GLuint tex)
   err = kernel.setArg(1, clObjects[1]); // The depth texture
 }
 
+// Update this function - should be somewhere else!
 double Scorer::getCollisionPenalty(Particle& p)
 {
   double* params = p.getArray();
@@ -268,67 +208,117 @@ double Scorer::getCollisionPenalty(Particle& p)
   return penalty;
 }
 
-std::vector<double> Scorer::calculateScores(std::vector<Particle>& particles)
+std::vector<double>& Scorer::calculateScores(std::vector<Particle>& particles)
 {
   // This will calculate the scores for each particle in swarm
-  std::vector<double> scores(numScores);
-
   unsigned int differenceSum[numScores];
   unsigned int unionSum[numScores];
   unsigned int intersectionSum[numScores];
-
   glFinish();
 
   try{
     err = queue.enqueueAcquireGLObjects(&clObjects, NULL, &event);
-  } catch (cl::Error er)
-  {
-      cout << "Aquire fail" << endl;
-      cout << er.what() << " " << er.err() << endl;
-  }
-  // Wait for GL aquisition
-  //event.wait();
-//  clReleaseMemObject(event);
+  } catch (cl::Error er) { cout << er.what() << " " << er.err() << endl; }
 
-  // Bit of a hack made from this GPU, but can have max 256
-  // work items, so since image is always 4:3, use 192 (16*12)
-  unsigned int w = 16;
-  unsigned int h = 12;
-  // This means each work item will operate on width/16 * height/12
-  // pixels.
-
-  cl::NDRange global(sqrt(numScores) * w, sqrt(numScores) * h);
-  cl::NDRange local(w, h);
   try {
-    err = queue.enqueueNDRangeKernel(kernel, cl::NullRange, global, local, NULL, &event);
-  } catch (cl::Error er)
-  {
-      cout << "Queue fail" << endl;
-      cout << er.what() << " " << er.err() << endl;
-  }
+    err = queue.enqueueNDRangeKernel(kernel, cl::NullRange, globalRange, localRange, NULL, &event);
+  } catch (cl::Error er) { cout << er.what() << " " << er.err() << endl; }
   event.wait();
 
-  std::vector<cl::Event> events(3);
-  queue.enqueueReadBuffer(differenceBuffer, CL_TRUE, 0, arraySize, &differenceSum, NULL, &events[0]);
-  queue.enqueueReadBuffer(unionBuffer, CL_TRUE, 0, arraySize, &unionSum, NULL, &events[1]);
-  queue.enqueueReadBuffer(intersectionBuffer, CL_TRUE, 0, arraySize, &intersectionSum, NULL, &events[2]);
-  cl::Event::waitForEvents(events);
+  queue.enqueueReadBuffer(differenceBuffer, CL_TRUE, 0, arraySize, &differenceSum, NULL, &readEvents[0]);
+  queue.enqueueReadBuffer(unionBuffer, CL_TRUE, 0, arraySize, &unionSum, NULL, &readEvents[1]);
+  queue.enqueueReadBuffer(intersectionBuffer, CL_TRUE, 0, arraySize, &intersectionSum, NULL, &readEvents[2]);
+  cl::Event::waitForEvents(readEvents);
 
   // Calculate scores using formula from paper...
-  float lambda = 20.0f, lambdak = 10.0f;
   for (unsigned int i = 0; i < numScores; i++)
   {
     double a = (double) differenceSum[i] / (unionSum[i] + 0.00001f);
     double b = (1 - ((double) (2 * intersectionSum[i]) / (intersectionSum[i] + unionSum[i])));
-    scores[i] = (a + lambda * b) + lambdak * getCollisionPenalty(particles[i]);
+    finalScores[i] = (a + lambda * b) + lambdak * getCollisionPenalty(particles[i]);
   }
-
-//  for (int i = 0; i < numScores; i++)
-//    cout << scores[i] << " ";
-//  cout << endl;
 
   //Release the VBOs so OpenGL can play with them
   err = queue.enqueueReleaseGLObjects(&clObjects, NULL, &event);
   event.wait();
-  return scores;
+  return finalScores;
 }
+
+// Function to display string for OpenCL error code
+const char* oclErrorString(cl_int error)
+{
+    static const char* errorString[] = {
+        "CL_SUCCESS",
+        "CL_DEVICE_NOT_FOUND",
+        "CL_DEVICE_NOT_AVAILABLE",
+        "CL_COMPILER_NOT_AVAILABLE",
+        "CL_MEM_OBJECT_ALLOCATION_FAILURE",
+        "CL_OUT_OF_RESOURCES",
+        "CL_OUT_OF_HOST_MEMORY",
+        "CL_PROFILING_INFO_NOT_AVAILABLE",
+        "CL_MEM_COPY_OVERLAP",
+        "CL_IMAGE_FORMAT_MISMATCH",
+        "CL_IMAGE_FORMAT_NOT_SUPPORTED",
+        "CL_BUILD_PROGRAM_FAILURE",
+        "CL_MAP_FAILURE",
+        "",
+        "",
+        "",
+        "",
+        "",
+        "",
+        "",
+        "",
+        "",
+        "",
+        "",
+        "",
+        "",
+        "",
+        "",
+        "",
+        "",
+        "CL_INVALID_VALUE",
+        "CL_INVALID_DEVICE_TYPE",
+        "CL_INVALID_PLATFORM",
+        "CL_INVALID_DEVICE",
+        "CL_INVALID_CONTEXT",
+        "CL_INVALID_QUEUE_PROPERTIES",
+        "CL_INVALID_COMMAND_QUEUE",
+        "CL_INVALID_HOST_PTR",
+        "CL_INVALID_MEM_OBJECT",
+        "CL_INVALID_IMAGE_FORMAT_DESCRIPTOR",
+        "CL_INVALID_IMAGE_SIZE",
+        "CL_INVALID_SAMPLER",
+        "CL_INVALID_BINARY",
+        "CL_INVALID_BUILD_OPTIONS",
+        "CL_INVALID_PROGRAM",
+        "CL_INVALID_PROGRAM_EXECUTABLE",
+        "CL_INVALID_KERNEL_NAME",
+        "CL_INVALID_KERNEL_DEFINITION",
+        "CL_INVALID_KERNEL",
+        "CL_INVALID_ARG_INDEX",
+        "CL_INVALID_ARG_VALUE",
+        "CL_INVALID_ARG_SIZE",
+        "CL_INVALID_KERNEL_ARGS",
+        "CL_INVALID_WORK_DIMENSION",
+        "CL_INVALID_WORK_GROUP_SIZE",
+        "CL_INVALID_WORK_ITEM_SIZE",
+        "CL_INVALID_GLOBAL_OFFSET",
+        "CL_INVALID_EVENT_WAIT_LIST",
+        "CL_INVALID_EVENT",
+        "CL_INVALID_OPERATION",
+        "CL_INVALID_GL_OBJECT",
+        "CL_INVALID_BUFFER_SIZE",
+        "CL_INVALID_MIP_LEVEL",
+        "CL_INVALID_GLOBAL_WORK_SIZE",
+    };
+
+    const int errorCount = sizeof(errorString) / sizeof(errorString[0]);
+
+    const int index = -error;
+
+    return (index >= 0 && index < errorCount) ? errorString[index] : "";
+
+};
+

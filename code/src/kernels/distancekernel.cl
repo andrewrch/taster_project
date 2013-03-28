@@ -1,6 +1,7 @@
 __kernel void calculateImageCharacteristics (
                        __read_only image2d_t tiledRender,         // The tiled rendering
-                       __read_only image2d_t depthImage,          // The depth image (observation)
+                       __read_only image2d_t skinImage,          // The skin image (segmented observation)
+                       __read_only image2d_t depthImage,          // The depth image (raw observation)
                        __global unsigned int* differenceSum,      // Depth difference 
                        __global unsigned int* unionSum,           // Union of skin image and render
                        __global unsigned int* intersectionSum,    // intersection of skin image and render

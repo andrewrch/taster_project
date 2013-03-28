@@ -6,8 +6,8 @@
 #include "hand.hpp"
 #include "cone.hpp"
 
-const double Hand::diameters[] = {18.0, 20.0, 18.0, 15.0, 20.0};
-const double Hand::lengths[] = {35.0, 40.0, 35.0, 25.0, 25.0};
+const double Hand::diameters[] = {19.0, 21.0, 19.0, 16.0, 20.0};
+const double Hand::lengths[] = {35.0, 40.0, 35.0, 25.0, 20.0};
 
 Hand::Hand(double params[NUM_PARAMETERS]) :
   // Initialise vectors with 0 length for push_back
@@ -16,14 +16,14 @@ Hand::Hand(double params[NUM_PARAMETERS]) :
 {
   // Centre of palm is origin of shape - possibly move this
   // depending on performance of model in testing
-  palmScale = glm::vec3(80.0f, 70.0f, 25.0f);
+  palmScale = glm::vec3(90.0f, 70.0f, 25.0f);
   // This is just for shifting the origin about
   palmPos = glm::vec3(0.0f, 0.0f, 0.0f);
   // First finger is
   finger1Pos = glm::vec3(-palmScale.x/2 + diameters[FINGER_1]/2, palmScale.y/2, 0.0f);
   finger2Pos = glm::vec3(-diameters[FINGER_2]/2, palmScale.y/2, 0.0f);
   finger3Pos = glm::vec3(diameters[FINGER_3]/2, palmScale.y/2, 0.0f);
-  finger4Pos = glm::vec3(palmScale.x/2 - diameters[FINGER_1]/2, palmScale.y/2, 0.0f);
+  finger4Pos = glm::vec3(palmScale.x/2 - diameters[FINGER_4]/2, palmScale.y/2, 0.0f);
   thumbPos = glm::vec3(-palmScale.x/2 + diameters[THUMB]/2, -palmScale.y/2 + 0.5, 0.75f);
 
   // Going to use push_back so reserve
@@ -44,11 +44,13 @@ void Hand::initialiseHand(double params[NUM_PARAMETERS])
   glm::mat4 pos = glm::translate(glm::mat4(1.0f),
       glm::vec3(params[GLOBAL_POS_X], params[GLOBAL_POS_Y], params[GLOBAL_POS_Z]));
   // Global rotation from params
-  glm::quat orientation(
-      params[GLOBAL_ROT_X],
-      params[GLOBAL_ROT_Y],
-      params[GLOBAL_ROT_Z],
-      params[GLOBAL_ROT_W]);
+//  glm::quat orientation(
+//      params[GLOBAL_ROT_X],
+//      params[GLOBAL_ROT_Y],
+//      params[GLOBAL_ROT_Z],
+//      params[GLOBAL_ROT_W]);
+//
+  glm::quat orientation(glm::vec3(params[GLOBAL_ROT_X], params[GLOBAL_ROT_Y], params[GLOBAL_ROT_Z]));
 
   // Always normalise before converting to transformation matrix
   orientation = glm::gtc::quaternion::normalize(orientation);
@@ -177,8 +179,8 @@ void Hand::initialisePalm(glm::mat4 start)
   cylinderWVPs.push_back(start * t * s);
 
   // The bottom of the palm
-  s = glm::scale(glm::mat4(1.0f), glm::vec3(palmScale.x, palmScale.y / 3, palmScale.z));
-  t = glm::translate(glm::mat4(1.0f), glm::vec3(0.0f, - palmScale.y / 2, 0.0f));
+  s = glm::scale(glm::mat4(1.0f), glm::vec3(palmScale.x, palmScale.y / 2, palmScale.z));
+  t = glm::translate(glm::mat4(1.0f), glm::vec3(0.0f, -palmScale.y / 2, 0.0f));
   sphereWVPs.push_back(start * t * s);
 }
 

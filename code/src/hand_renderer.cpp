@@ -43,7 +43,7 @@ class HandRenderer
       classifier(skinHist, nonSkinHist),
       thresholder(0.4, 0.5, 20),
       swarm(particles, NUM_PARAMETERS, c1, c2), 
-      scorer(particles, 80, 100, width, height),
+      scorer(particles, 20.0, 10.0, 80, 100, width, height), // 80, 100
       imageWidth(width),
       imageHeight(height),
       windowWidth(WINDOW_WIDTH),
@@ -549,7 +549,7 @@ int main(int argc, char** argv)
     shutDown(1);
 
   // Tidy up these command line args
-  HandRenderer *app = new HandRenderer(atoi(argv[1]), atoi(argv[2]), 640, 480, argv[3], argv[4]);
+  HandRenderer *app = new HandRenderer(atoi(argv[1]), atoi(argv[2]), atoi(argv[3]), atoi(argv[4]), argv[5], argv[6]);
 
   if (!app->init()) 
     shutDown(1);

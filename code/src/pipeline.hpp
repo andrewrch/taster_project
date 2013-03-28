@@ -21,7 +21,8 @@
 #include <glm/glm.hpp>
 #include <glm/gtc/matrix_transform.hpp>
 #include <glm/gtx/transform2.hpp>
-#include <glm/gtx/quaternion.hpp>
+#include <vector>
+#include <iostream>
 
 class Pipeline
 {
@@ -29,124 +30,50 @@ class Pipeline
     Pipeline(unsigned int w, unsigned int h, unsigned int t = 4) :
       width(w),
       height(h),
-      numTiles(t)
+      numTiles(t),
+      tileTransformations(t)
     {
-      scale      = glm::vec3(1.0f, 1.0f, 1.0f);
-      worldPos   = glm::vec3(0.0f, 0.0f, 0.0f);
-      rotateInfo = glm::vec3(0.0f, 0.0f, 0.0f);
-
-    }
-
-    void setScale(float scaleX, float scaleY, float scaleZ)
-    {
-      scale.x = scaleX;
-      scale.y = scaleY;
-      scale.z = scaleZ;
-    }
-
-    void setWorldPos(float x, float y, float z)
-    {
-      worldPos.x = x;
-      worldPos.y = y;
-      worldPos.z = z;
-    }
-    
-    void setWorldPos(const glm::vec3& pos)
-    {
-      worldPos = pos;
-    }
-
-    void setRotate(float rotateX, float rotateY, float rotateZ)
-    {
-      rotateInfo.x = rotateX;
-      rotateInfo.y = rotateY;
-      rotateInfo.z = rotateZ;
-
-      orientation = glm::quat(glm::vec3(rotateX, rotateY, rotateZ));
+      updateTransformations();
     }
 
     void setPerspectiveProj(float fovy, float aspect, float zNear, float zFar)
     {
-        perspectiveProj.fovy = fovy;
-        perspectiveProj.aspect = aspect;
-        perspectiveProj.zNear = zNear;
-        perspectiveProj.zFar = zFar;
+      proj.fovy = fovy;
+      proj.aspect = aspect;
+      proj.zNear = zNear;
+      proj.zFar = zFar;
+      updateTransformations();
     }
 
-    void setCamera(const glm::vec3& pos, const glm::vec3& target, const glm::vec3& up)
+    inline void setCamera(const glm::vec3& pos, const glm::vec3& target, const glm::vec3& up)
     {
-        camera.pos = pos;
-        camera.target = target;
-        camera.up = up;
+      camera.pos = pos;
+      camera.target = target;
+      camera.up = up;
+      updateTransformations();
     }
 
-    void setTiles(unsigned int tiles) { numTiles = tiles; }
-
-    inline const glm::mat4& getVTrans()
-    {
-      glm::mat4 cameraTrans;
-
-      cameraTrans = glm::lookAt(camera.pos, camera.target, camera.up);
-        
-      VTransformation = cameraTrans;
-      return VTransformation;
+    inline void setTiles(unsigned int tiles) { 
+      numTiles = tiles; 
+      tileTransformations = std::vector<glm::mat4>(tiles);
+      updateTransformations();
     }
 
-    inline const glm::mat4& getVPTrans()
-    {
-      glm::mat4 cameraTrans, projTrans;
-
-      cameraTrans = glm::lookAt(camera.pos, camera.target, camera.up);
-      projTrans = glm::perspective(
-          perspectiveProj.fovy, 
-          perspectiveProj.aspect, 
-          perspectiveProj.zNear,
-          perspectiveProj.zFar);
-        
-      VPTransformation = projTrans * cameraTrans;
-
-      return VPTransformation;
-    }
-
-    inline const glm::mat4& getTileTrans(unsigned int i)
-    {
-      getVPTrans();
-      
-      glm::mat4 scaleTrans, translateTrans;
-      // Tiles are row major
-      int x = sqrt(numTiles);
-      float scale = 1.0 / x;
-      scaleTrans = glm::scale(scaleTrans, glm::vec3(scale, scale, 1.0f));
-      float xTrans = -1.0f + (2.0 * scale * (i % x)) + scale;
-      float yTrans = -1.0f + (2.0 * scale * (i / x)) + scale;
-      float zTrans = -0.0f;
-      translateTrans = glm::translate(translateTrans, glm::vec3(xTrans, yTrans, zTrans));
-
-      tileTransformation = translateTrans * scaleTrans * VPTransformation;
-      return tileTransformation;
-    }
-//    inline const glm::mat4& getVPTrans();
-//    inline const glm::mat4& getVTrans();
- //   inline const glm::mat4& getTileTrans(unsigned int);
+    inline const glm::mat4& getVTrans() { return VTransformation; }
+    inline const glm::mat4& getVPTrans() { return VPTransformation; }
+    inline const glm::mat4& getTileTrans(unsigned int i) { return tileTransformations[i]; }
 
   private:
     unsigned int width;
     unsigned int height;
     unsigned int numTiles;
 
-    glm::vec3 scale;
-    glm::vec3 worldPos;
-    glm::vec3 rotateInfo;
-
-    glm::quat orientation;
-
-
     struct {
       float fovy;
       float aspect;
       float zNear;
       float zFar;
-    } perspectiveProj;
+    } proj;
 
     struct {
       glm::vec3 pos;
@@ -156,7 +83,31 @@ class Pipeline
 
     glm::mat4 VPTransformation;
     glm::mat4 VTransformation;
-    glm::mat4 tileTransformation;
+    std::vector<glm::mat4> tileTransformations;
+
+    void updateTransformations()
+    {
+      // View
+      VTransformation = glm::lookAt(camera.pos, camera.target, camera.up);
+      // View projection
+      glm::mat4 projTrans = glm::perspective(proj.fovy, proj.aspect, proj.zNear, proj.zFar);
+      VPTransformation = projTrans * VTransformation;
+
+      // Tile transformation
+      glm::mat4 scaleTrans, translateTrans;
+      int x = sqrt(numTiles);
+      double scale = 1.0 / x;
+      scaleTrans = glm::scale(scaleTrans, glm::vec3(scale, scale, 1.0f));
+      double xTrans, yTrans, zTrans;
+      for (unsigned int i = 0; i < numTiles; i++)
+      {
+        xTrans = -1.0f + (2.0 * scale * (i % x)) + scale;
+        yTrans = -1.0f + (2.0 * scale * (i / x)) + scale;
+        zTrans = 0.0f;
+        translateTrans = glm::translate(glm::mat4(1.0f), glm::vec3(xTrans, yTrans, zTrans));
+        tileTransformations[i] = translateTrans * scaleTrans * VPTransformation;
+      }
+    }
 };
 
 #endif	/* PIPELINE_H */
