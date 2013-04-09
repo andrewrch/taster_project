@@ -1,29 +1,14 @@
 \documentclass[10pt,a4paper,notitlepage,twocolumn]{report}
 \usepackage{graphicx}
 \usepackage{subfig}
-%\usepackage{fullpage}
 \usepackage{multicol}
 \usepackage{IEEEtrantools}
 \usepackage{times}
 
 \usepackage[margin=0.8in]{geometry}
 
-% Physical page layout
 \twocolumn \flushbottom \sloppy
-% Note that TeX has built-in 1-inch top and left margins.
-%\setlength\topmargin{-0.25in}
-%\setlength\oddsidemargin{-0.25in}
-%\setlength\evensidemargin{-0.25in}
-%\setlength\textheight{9.0in}
-%\setlength\textwidth{7.0in}
-%\setlength\columnsep{0.25in}
-%\newlength\titlebox \setlength\titlebox{2.25in}
-% No pages numbers or other headers or footers
-%\setlength\headheight{0pt}   \setlength\headsep{0pt}
-%\thispagestyle{empty}        \pagestyle{empty}
-
 \date{}
-%\usepackage{savetrees}
 
 % The document begins
 \title{Taster Project: Model-based 3D Single Hand Pose Estimation using Kinect}
@@ -111,24 +96,27 @@ The method implemented, as with many model based solutions is split in to three 
     \label{fig:hand_model}
   \end{figure}
 
-  The aim of rendering is to produce an image which looks identical to the observation.  Since our observation is a binary skin image and a Kinect depth image, we render each fragment as a greyscale value which is the interpolated world space depth value passed from the vertex shader.
+  The aim of rendering is to produce an image which looks identical to the
+  observation.  Since our observation is a binary skin image and a Kinect depth
+  image, we render each fragment as a greyscale value which is the interpolated
+  world space depth value passed from the vertex shader.
 
   \subsection{Pose selection}
   \label{subsec:pose_selection}
 
-  In order to find pose parameters as acurately as possible, a search over parameter space is required.  
+  In order to estimate pose parameters accurately, a search over parameter space is required.  
 
   We first formally define our observation and hypothesis.  Our segemented hand
-  image, $o_s$ is a binary mask which is 1 if the pixel in our obseration
+  image, $o_s$ is a binary mask which is set to 1 if the pixel in our obseration
   belongs to the hand, and 0 otherwise.  The observed depth image, $o_d$ is a
   raw image captured from the Kinect sensor, which gives depth values from the
   camera in millimeters.  Our rendering, $r_d(h, C)$ gives the depth in
-  millimeters of the rendered hypothesis $h$ from the camera $C$.  We produce a
+  world units of the rendered hypothesis $h$ from the camera $C$.  We produce a
   binary map $r_m(h, C)$ in which a pixel is set as 1 if the respective depths
   of a pixel in $r_d$ and $o_d$ differ by less than a predetermined value,
   $d_m$ or if $o_d$ is 0, and set to 0 otherwise.  If $o_d$ has a value of 0,
   this means the observation is too close to the camera, and we assume that in
-  this case this must be a pixel corresponding to the hand. Given these
+  this case the pixel corresponds to the hand. Given these
   definitions, we define the objective function $E(h, O)$.
   
 \begin{equation}
@@ -153,7 +141,14 @@ The second term of $E(h, O)$, $kc(h)$  penalises kinectically implausible hypoth
 
     \subsubsection{Particle Swarm Optimisation}
 
-  The parameter search method chosen for this implementation is Particle Swarm Optimisation~\cite{kennedy1995particle}.  Particle Swarm Optimisation is a nature inspired evolutionary optimisation algorithm in which a swarm of ``Particles'' exist in parameter space. The swarm exists for a set number of generations, and each particle moves according to information about the value of the objective function discovered itself and by other particles in the swarm.
+  The parameter search method chosen for this implementation is Particle Swarm
+Optimisation~\cite{kennedy1995particle}.  Particle Swarm Optimisation is a
+nature inspired evolutionary optimisation algorithm in which a swarm of
+``Particles'' exist in parameter space. The swarm exists for a set number of
+generations, and each particle moves according to information about the value of
+the objective function discovered itself and by other particles in the swarm.
+Finally, the optimum foud by the swarm is the best value of the objective
+function found by any particle over all generations.
 
   Each particle stores its current position $x_k$ and its current velocity $v_k$.  Also stored is $P_k$, a record of its best position, or the position at which it achieved the lowest value from the objective function up to generation $k$.  The position $G_k$, the current global optimum or the best position that any particle in the swarm has achieved up to generation $k$ is broadcast to the entire swarm.  Each generation, the position and velocity of each particle is updated accordording to equations~\ref{eq:posupdate} and~\ref{eq:velupdate}.
 
@@ -167,28 +162,79 @@ The second term of $E(h, O)$, $kc(h)$  penalises kinectically implausible hypoth
   v_{k+1} = w(v_k + c_1r_1(P_k - x_k) + c_2r_2(G_k - x_k)), 
 \end{equation}
 
-where $w$ is a constant, $r_1$ and $r_2$ are uniformly sampled random numbers between 0 and 1, and $c_1$ and $c_2$ are termed the cognitive and social components respectively as defined by .  As suggested, $c_1 = 2.8$, $c_2 = 1.3$, and $w = 2 / \left | 2 - \psi - \sqrt{\psi^2 - 4 \psi} \right |$ with $\psi = c_1 + c_2$.
+where $w$ is a constant, $r_1$ and $r_2$ are uniformly sampled random numbers
+between 0 and 1, and $c_1$ and $c_2$ are termed the cognitive and social
+components respectively as defined by .  As suggested, $c_1 = 2.8$, $c_2 = 1.3$,
+and $w = 2 / \left | 2 - \psi - \sqrt{\psi^2 - 4 \psi} \right |$ with $\psi =
+c_1 + c_2$.  After $k$ generations, $G_k$, the global best position is the
+result of the optimisation.
 
-For this application, the position of each particle in space represents the value of each of the pose parameters of the hypothesis, and thus the parameters with which to evaluate the objective function.  Each particle represents a different hand pose, and the best position over all $k$ generations, $h_{best}$ is chosen as the best estimate of hand pose for that observation.
+For this application, the position of each particle in space represents the
+value of each of the pose parameters of the hypothesis, and thus the parameters
+with which to render the hand model and evaluate the objective function.  Each
+particle represents a different hand pose, and the best position over all $k$
+generations, $h_{best}$ is chosen as the best estimate of hand pose for the observation.
 
-Since the search space is very large, and since each frame in a temporal image series will differ only a small amount from the previous frame, perturbations of $h_{best}$ from frame $F_t$ are used as initial particle positions for the next frame $F_{t+1}$.  The deviation of other particles in the swarm from $h_{best}$ is determined experimentally and depends on the jerkiness of the hand motion in the image sequence. 
+Since this system operates on a temporal image sequence, and since the position
+and articulation of the hand will differ only a small amount from the previous frame,
+perturbations of $h_{best}$ from frame $F_t$ are used as initial particle
+positions for the next frame $F_{t+1}$.  This ensures that the parameter search
+for the next frame is initialised closely to the expected solution.  The
+deviation of other particles in the swarm from $h_{best}$ is determined
+experimentally and depends on the speed of hand motion in the image sequence and
+the framerate.
 
 \subsection{GPU Acceleration}
 
-Several components of this implementation are parallelisable, and since modern GPUs are programmable, the implementation follows the framework given in~\cite{kyriazis2011} to make better use of available hardware.
+Several components of this implementation are parallelisable, and since modern
+GPUs are programmable, the implementation follows the framework given
+in~\cite{kyriazis2011} to make better use of available hardware and improve
+performance.
 
 \subsubsection{Tiled rendering}
 
-Rendering is a costly operation, but the hand model we are rendering is very simple and requires only a few triangles to be drawn.  Because of this, a single draw call will not be utilising the full capacity of the GPU.  To improve upon this, we render many hand poses simultaneously in a large tiled rendering.  Each of the poses then correspond to a particle in the swarm, meaning a single rendering is all that is required for each swarm generation.
+Rendering can be a costly operation, but the hand model we are rendering is
+simple and requires little GPU power to be drawn.  Because of this, a single
+draw call will not be utilising the full capacity of a modern GPU, and we are
+wasting resources.  To improve upon this, we render many hand poses
+simultaneously in a large tiled rendering.  The size of the rendering
+corresponds to the number of particles in the swarm, meaning a single rendering 
+is all that is required for each swarm generation.  This is an optimum use of
+GPU resources, since the position of particles in generation $k+1$ is
+dependent on the objective function result of particles in generation $k$.
 
 \subsubsection{Objective function evaluation}
 
-In recent years, GPUs have evolved to allow not just graphics rendering, but for programs to be executed, exploiting their massively parallel architecture.  OpenCL~\cite{opencl1.2spec}, a platform which allows us to produce programs to execute on a GPU, is used to reduce the summations within the distance function $D(O, h, C)$ given in equation~\ref{eq:d}.  Since the large tiled rendering is written to memory on the graphics card, we evaluate the objective function without copying image data across the PCI bus further increasing efficiency.  We assign a work group to each hand pose, and then as many work items as the GPU supports in order to maximise the work done simultaneously on the GPU.
+In recent years, GPUs have evolved to perform not just graphics rendering, but
+general computation as well, allowing the exploitation of their
+parallel architecture.  OpenCL~\cite{opencl1.2spec}, a platform which allows us
+to produce programs to execute on a GPU, is used to reduce the summations within
+the distance function $D(O, h, C)$ given in equation~\ref{eq:d}.  Since the
+large tiled rendering is written to memory on the graphics card, and we evaluate
+the objective function on the GPU as well, only the result of the objective 
+function is copied across the PCI bus.
 
 \section{Results}
 
+Work is still ongoing on quantitative evaluation of the implemented system,
+however preliminary qualitative results are given.
+
 \subsection{Qualitative results}
+
+Figure~\ref{fig:results1} shows several images captured during the tracking.
+
 \section{Conclusion}
+
+This report gives details of the implementation of a system for full 3D hand
+pose estimation.  The system implemented is based on a paper by Oikonomidis et
+al~\ref{bmvc2011oikonom}.  The implemented system functions well, and is capable
+of tracking a single hand at near real-time speeds (10fps).  The tracking is
+fairly accurate for 3D global position and finger articulation, but struggles
+with fast movements and global orientation changes.  Skin segmentation and the
+poor quality of the Kinect RGB camera contribute to these problems, but further
+work is being done to improve segmentation and overcome these issues.  Further
+tuning of Particle Swarm parameters may lead to better finger articulation
+estimation. 
 
 % Now print the bibliography
 \bibliographystyle{plain}
