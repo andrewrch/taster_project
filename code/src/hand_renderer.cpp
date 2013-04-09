@@ -41,9 +41,9 @@ class HandRenderer
       skinHist(skinFilename),
       nonSkinHist(nonSkinFilename),
       classifier(skinHist, nonSkinHist),
-      thresholder(0.4, 0.5, 20),
+      thresholder(0.4, 0.7, 250),
       swarm(particles, NUM_PARAMETERS, c1, c2), 
-      scorer(particles, 20.0, 10.0, 80, 100, width, height), // 80, 100
+      scorer(particles, 20.0, 10.0, 10, 40, width, height), // 80, 100
       imageWidth(width),
       imageHeight(height),
       windowWidth(WINDOW_WIDTH),
@@ -64,6 +64,7 @@ class HandRenderer
       glDeleteFramebuffers(1,&tileFBO);
       glDeleteRenderbuffers(1,&tileRB);
     	glDeleteTextures(1, &bgrTexture);
+    	glDeleteTextures(1, &skinTexture);
     	glDeleteTextures(1, &depthTexture);
     }   
 
@@ -73,8 +74,8 @@ class HandRenderer
       // Bind to our texture handle
       glBindTexture(GL_TEXTURE_2D, textureID);
       // Set texture interpolation methods for minification and magnification
-      glTexParameterf(GL_TEXTURE_2D,GL_TEXTURE_MIN_FILTER,GL_LINEAR); 
-      glTexParameterf(GL_TEXTURE_2D,GL_TEXTURE_MAG_FILTER,GL_LINEAR); 
+      glTexParameterf(GL_TEXTURE_2D,GL_TEXTURE_MIN_FILTER, GL_NEAREST); 
+      glTexParameterf(GL_TEXTURE_2D,GL_TEXTURE_MAG_FILTER, GL_NEAREST); 
       glTexParameterf( GL_TEXTURE_2D, GL_TEXTURE_WRAP_S , GL_REPEAT );
       glTexParameterf( GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT );
 
@@ -91,7 +92,10 @@ class HandRenderer
       {
         inputColourFormat = GL_RED_INTEGER;
         inputType = GL_UNSIGNED_SHORT;
-        internalFormat = GL_RGBA16UI;
+        if (mat.depth() == CV_8U)
+          internalFormat = GL_RGBA8UI;
+        else
+          internalFormat = GL_RGBA16UI;
       }
 
       // Create the texture
@@ -107,10 +111,6 @@ class HandRenderer
 
       glBindTexture(GL_TEXTURE_2D, 0);
     }
-
-    //bool initCameras()
-    //bool initShaders()
-    //bool initPrimitives()
 
     bool init()
     {
@@ -136,7 +136,7 @@ class HandRenderer
       //
       // Seperate this out as a sphere and cylinder class, and have
       // a single render function for each
-      mesh.init(0.5f, 50, 50, 0.5f, 1.0f, 20);
+      mesh.init(0.5f, 7, 7, 0.5f, 1.0f, 8);
 
       // Load shaders for tiled rendering
       tileShader.loadFromFile(GL_VERTEX_SHADER, "./src/shaders/tile.glslv");
@@ -172,11 +172,17 @@ class HandRenderer
       if(status != GL_FRAMEBUFFER_COMPLETE)
         fprintf(stderr, "FrameBuffer is not complete.\n");
 
+      // Generate textures
       glGenTextures(1, &depthTexture);
+      glGenTextures(1, &skinTexture);
       glGenTextures(1, &bgrTexture);
-      // Initialise texture to blank image (Required for CL interop)
-      cv::Mat blank = cv::Mat::zeros(cv::Size(imageWidth, imageHeight), CV_16UC1);
+      // Initialise skin and depth textures to blank images (Required for CL interop)
+      cv::Mat blank = cv::Mat::zeros(cv::Size(imageWidth, imageHeight), CV_8UC1);
+      matToTexture(skinTexture, blank);
+      blank = cv::Mat::zeros(cv::Size(imageWidth, imageHeight), CV_16UC1);
       matToTexture(depthTexture, blank);
+
+      // RGB Image is always 640x480 for displaying (Kinect max resolution)
       blank = cv::Mat::zeros(cv::Size(640, 480), CV_8UC3);
       matToTexture(bgrTexture, blank);
 
@@ -184,15 +190,17 @@ class HandRenderer
 
       // OpenCL interop stuff here
       scorer.loadProgram("./src/kernels/distancekernel.cl");
-      scorer.loadData(tileRB, depthTexture);
+      scorer.loadData(tileRB, skinTexture, depthTexture);
 
       // Open the kinect up
       capture = cv::VideoCapture(CV_CAP_OPENNI);
+//      capture.set(CV_CAP_PROP_OPENNI_REGISTRATION,0);
 
       // Structure element for morphology whatsit
       se = cv::Mat::zeros(cv::Size(5, 5), CV_8UC1);
       cv::circle(se, cv::Point(3, 3), 2, cv::Scalar(255), -1);
-      previousFrame = cv::Mat(cv::Size(imageWidth, imageHeight), CV_16UC1);
+      prevSkin = cv::Mat(cv::Size(imageWidth, imageHeight), CV_8UC1);
+      prevDepth = cv::Mat(cv::Size(imageWidth, imageHeight), CV_16UC1);
 
       return true;
     }
@@ -257,37 +265,50 @@ class HandRenderer
 //        glfwSwapBuffers();
     }
 
-    void processImages(cv::Mat& bgrImage, cv::Mat& depthMap)
+    void processImages(cv::Mat& bgrImage, cv::Mat& skinImage, cv::Mat& depthMap)
     {
       capture.grab();
-      capture.retrieve( depthMap, CV_CAP_OPENNI_DEPTH_MAP );
+      // First grab the BGR image
       capture.retrieve( bgrImage, CV_CAP_OPENNI_BGR_IMAGE );
 
-      // Require these images from the kinect as well...
-      cv::Mat validPixels;
-      cv::Mat dispMap;
+      // Grab images for depth stuff
+      cv::Mat validPixels;//, dispMap;
+      capture.retrieve( depthMap, CV_CAP_OPENNI_DEPTH_MAP );
 	  	capture.retrieve( validPixels, CV_CAP_OPENNI_VALID_DEPTH_MASK );
-		  capture.retrieve( dispMap, CV_CAP_OPENNI_DISPARITY_MAP );
 
-      cv::Mat bgrBlurred = bgrImage.clone();
+//      imshow("valid", validPixels);
+//		  capture.retrieve( dispMap, CV_CAP_OPENNI_DISPARITY_MAP );
+
+      //cv::Mat bgrBlurred = bgrImage.clone();
       //cv::medianBlur(yuvImage, yuvImage, 3);
-      //cv::GaussianBlur(bgrImage, bgrBlurred, cv::Size(25, 25), 1.5);
 
-      // Do processing with them
-      cv::Mat yuvImage;
-      cv::cvtColor(bgrBlurred, yuvImage, CV_BGR2YCrCb);
+      // Resize the images if required, then convert BGR to YCrCb
+      cv::Mat bgrSmall, yuvImage;
+      if (imageWidth != bgrImage.cols)
+      {
+        cv::resize(bgrImage, bgrSmall, cv::Size(imageWidth, imageHeight));
+        cv::resize(depthMap, depthMap, cv::Size(imageWidth, imageHeight));
+        cv::resize(validPixels, validPixels, cv::Size(imageWidth, imageHeight));
+        cv::cvtColor(bgrSmall, yuvImage, CV_BGR2YCrCb);
+      }
+      else
+        cv::cvtColor(bgrImage, yuvImage, CV_BGR2YCrCb);
+
+//      cv::GaussianBlur(yuvImage, yuvImage, cv::Size(25, 25), 1.5);
+      // Find skin coloured pixels in RGB image
       cv::Mat prob = classifier.classifyImage(yuvImage);
-      cv::Mat skin = thresholder.thresholdImage(prob, depthMap, validPixels, previousFrame); 
+      cv::Mat skin = thresholder.thresholdImage(prob, depthMap, validPixels, prevSkin, prevDepth); 
 
-      cv::morphologyEx(skin, skin, cv::MORPH_CLOSE, se);
+      // Close and dilate to file holes and enlarge mask slightly
+//      cv::morphologyEx(skin, skin, cv::MORPH_CLOSE, se);
       cv::morphologyEx(skin, skin, cv::MORPH_DILATE, se);
 
       // Find contours in skin image
       vector<vector<cv::Point> > contours;
       vector<cv::Vec4i> hierarchy;
-      cv::Mat c = skin.clone();
+//     cv::Mat c = skin.clone(); // Find contours is destructive...
       cv::findContours(
-          c, 
+          skin, // Find contours is destructive so skin is no good after this
           contours, 
           hierarchy, 
           CV_RETR_LIST, 
@@ -303,10 +324,10 @@ class HandRenderer
           size = contours[i].size();
         }
 
-      // Draw largest contour, filled
-      skin = cv::Mat::zeros( bgrImage.size(), CV_8UC1 );
+      // Draw largest contour, filled.  This is the skin mask.
+      skinImage = cv::Mat::zeros( yuvImage.size(), CV_8UC1 );
       cv::drawContours(
-          skin, 
+          skinImage, 
           contours, 
           largestContour, 
           cv::Scalar(255), 
@@ -316,13 +337,11 @@ class HandRenderer
           0, 
           cv::Point() );
 
-      for (int i = 0; i < depthMap.rows; i++)
-        for (int j = 0; j < depthMap.cols; j++)
-          if (!skin.at<uchar>(i, j))
-            depthMap.at<uint16_t>(i, j) = 0;
-
-      // Finally resize the image if required
-      cv::resize(depthMap, depthMap, cv::Size(imageWidth, imageHeight));
+//      for (int i = 0; i < depthMap.rows; i++)
+//        for (int j = 0; j < depthMap.cols; j++)
+//          if (!skinImage.at<uchar>(i, j))
+//            depthMap.at<uint16_t>(i, j) = 0;
+//
     }
 
     void initBackground()
@@ -419,26 +438,31 @@ class HandRenderer
       if (glfwGetKey(GLFW_KEY_ESC) == GLFW_PRESS)
         return false;
 
-      cv::Mat depthImage;
-      cv::Mat bgrImage;
+      cv::Mat depthImage, skinImage, bgrImage;
+      processImages(bgrImage, skinImage, depthImage);
+      skinImage.copyTo(prevSkin);
+      depthImage.copyTo(prevDepth);
 
-      processImages(bgrImage, depthImage);
+      // Display depth image...
+      imshow("skin", skinImage);
+      //imshow("depth", dispMap);
+      cvWaitKey(10);
 
       // Generate a number for our textureID's unique handle
       matToTexture(bgrTexture, bgrImage);
+      matToTexture(skinTexture, skinImage);
       matToTexture(depthTexture, depthImage);
 
       vector<double> scores;
-
       // If the users hand hasn't moved in to an acceptable 
       // position, keep waiting
       if (!started)
       {
         makeTiledRendering();
-        scorer.setTexture(depthTexture);
+        scorer.setObservations(skinTexture, depthTexture);
         scores = scorer.calculateScores(swarm.getParticles());
         for (unsigned int i = 0; i < scores.size(); i++)
-          if (scores[i] < 21.0f)
+          if (scores[i] < 92.0f)
             started = true;
         // Draw hand as a hint of where user should be putting theirs
         drawHand();
@@ -457,27 +481,30 @@ class HandRenderer
               unsigned int particle = rand() % numTiles;
               // Choose random joint (Add 7 so ignore global pos/orientation)
               unsigned int joint = (rand() % (NUM_PARAMETERS - 7)) + 7;
-
-//              cout << "Particle: " << particle << " joint: " << joint << endl;
-              swarm.getParticles()[particle].getArray()[joint] += (rand()/(double(RAND_MAX)/2) - 1) * M_PI/10;
+              swarm.getParticles()[particle].getArray()[joint] = (rand()/(double(RAND_MAX)/2) - 1) * M_PI/2;
             }
           }
           makeTiledRendering();
           // For some reason texture needs setting every
           // frame TODO Find out why!
-          scorer.setTexture(depthTexture);
+          scorer.setObservations(skinTexture, depthTexture);
           scores = scorer.calculateScores(swarm.getParticles());
           swarm.updateSwarm(scores);
         }
 
         drawHand();
         swarm.resetScores(scores);
-        previousFrame = depthImage.clone();
+
       }
 
       glfwSwapBuffers();
       // Update frame count
       frameCount++;
+
+        imshow("prevskin", prevSkin);
+        imshow("prevDepth", prevDepth);
+        cvWaitKey(10);
+
       return true;
     }
 
@@ -498,12 +525,12 @@ class HandRenderer
 
     Pipeline windowPipeline, renderPipeline;
 
-    GLuint bgrTexture, depthTexture;
+    GLuint bgrTexture, depthTexture, skinTexture;
     GLuint tileFBO, tileRB; 
     GLuint tsLocation, tprLocation, npLocation;
 
     GLuint backgroundVAO, backgroundTexcoords, backgroundVertices, backgroundTexLocation;
-    cv::Mat se, previousFrame;
+    cv::Mat se, prevDepth, prevSkin;
 
     unsigned int frameCount;
 

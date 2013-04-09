@@ -15,11 +15,11 @@ Scorer::Scorer(
     unsigned int scores, 
     double l, 
     double lk, 
-    unsigned int _dM, 
     unsigned int _dm, 
+    unsigned int _dM, 
     unsigned int width, 
     unsigned int height) : 
-  clObjects(2),
+  clObjects(3),
   finalScores(scores),
   dm(_dm),
   dM(_dM),
@@ -137,7 +137,7 @@ void Scorer::loadProgramFromString(const string& kernel_source)
 
 }
 
-void Scorer::loadData(GLuint rbo, GLuint tex)
+void Scorer::loadData(GLuint rbo, GLuint skin, GLuint depth)
 {
     //make sure OpenGL is finished before we proceed
     glFinish();
@@ -149,7 +149,8 @@ void Scorer::loadData(GLuint rbo, GLuint tex)
       cout << er.what() << " " << er.err() << endl;
     }
     try{
-      clObjects[1] = cl::ImageGL(context, CL_MEM_READ_ONLY, GL_TEXTURE_2D, 0, tex, &err);
+      clObjects[1] = cl::ImageGL(context, CL_MEM_READ_ONLY, GL_TEXTURE_2D, 0, skin, &err);
+      clObjects[2] = cl::ImageGL(context, CL_MEM_READ_ONLY, GL_TEXTURE_2D, 0, depth, &err);
     }
     catch (cl::Error er) {
       cout << "Texture fail" << endl;
@@ -161,35 +162,38 @@ void Scorer::loadData(GLuint rbo, GLuint tex)
     try
     {
       err = kernel.setArg(0, clObjects[0]); // The renderbuffer
-      err = kernel.setArg(1, clObjects[1]); // The depth texture
-      err = kernel.setArg(2, differenceBuffer);
-      err = kernel.setArg(3, unionBuffer);
-      err = kernel.setArg(4, intersectionBuffer);
-      err = kernel.setArg(5, dm);
-      err = kernel.setArg(6, dM);
-      err = kernel.setArg(7, (unsigned int) floor(sqrt(numScores)));
-      err = kernel.setArg(8, imageWidth);
-      err = kernel.setArg(9, imageHeight);
-      err = kernel.setArg(10, maxWorkGroupSize * sizeof(cl_uint), NULL);
+      err = kernel.setArg(1, clObjects[1]); // The skin texture
+      err = kernel.setArg(2, clObjects[2]); // The depth texture
+      err = kernel.setArg(3, differenceBuffer);
+      err = kernel.setArg(4, unionBuffer);
+      err = kernel.setArg(5, intersectionBuffer);
+      err = kernel.setArg(6, dm);
+      err = kernel.setArg(7, dM);
+      err = kernel.setArg(8, (unsigned int) floor(sqrt(numScores)));
+      err = kernel.setArg(9, imageWidth);
+      err = kernel.setArg(10, imageHeight);
       err = kernel.setArg(11, maxWorkGroupSize * sizeof(cl_uint), NULL);
       err = kernel.setArg(12, maxWorkGroupSize * sizeof(cl_uint), NULL);
+      err = kernel.setArg(13, maxWorkGroupSize * sizeof(cl_uint), NULL);
     }
     catch (cl::Error er) {
       printf("ERROR: %s(%s)\n", er.what(), oclErrorString(er.err()));
     }
 }
 
-void Scorer::setTexture(GLuint tex)
+void Scorer::setObservations(GLuint skin, GLuint depth)
 {
   try{
-    clObjects[1] = cl::ImageGL(context, CL_MEM_READ_ONLY, GL_TEXTURE_2D, 0, tex, &err);
+    clObjects[1] = cl::ImageGL(context, CL_MEM_READ_ONLY, GL_TEXTURE_2D, 0, skin, &err);
+    clObjects[2] = cl::ImageGL(context, CL_MEM_READ_ONLY, GL_TEXTURE_2D, 0, depth, &err);
   }
   catch (cl::Error er) {
     cout << "Texture fail" << endl;
     cout << er.what() << " " << er.err() << endl;
     printf("v_vbo: %s\n", oclErrorString(err)); 
   }
-  err = kernel.setArg(1, clObjects[1]); // The depth texture
+  err = kernel.setArg(1, clObjects[1]); // The skin texture
+  err = kernel.setArg(2, clObjects[2]); // The depth texture
 }
 
 // Update this function - should be somewhere else!
@@ -233,11 +237,15 @@ std::vector<double>& Scorer::calculateScores(std::vector<Particle>& particles)
   // Calculate scores using formula from paper...
   for (unsigned int i = 0; i < numScores; i++)
   {
-    double a = (double) differenceSum[i] / (unionSum[i] + 0.00001f);
+    double a = (double) differenceSum[i] / (unionSum[i] + 0.000001f);
     double b = (1 - ((double) (2 * intersectionSum[i]) / (intersectionSum[i] + unionSum[i])));
     finalScores[i] = (a + lambda * b) + lambdak * getCollisionPenalty(particles[i]);
   }
 
+//  for (int i = 0; i < numScores; i++)
+//    cout << finalScores[i] << "  ";
+//  cout << endl;
+//
   //Release the VBOs so OpenGL can play with them
   err = queue.enqueueReleaseGLObjects(&clObjects, NULL, &event);
   event.wait();

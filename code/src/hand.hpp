@@ -104,8 +104,8 @@ class Hand
 
     glm::mat4 initialiseJoint(
         glm::mat4,          // The current WVP state
-        double,              // X rotation
-        double,              // Z rotation
+        double*,              // X rotation
+        double*,              // Z rotation
         double,              // Initial diameter
         double,              // Initial length
         double);             // Cone ratio

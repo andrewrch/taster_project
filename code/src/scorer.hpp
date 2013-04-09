@@ -19,20 +19,20 @@ class Scorer {
     void loadProgram(const std::string&);
     // Setup the data for the kernel (I.e. the renderbuffer
     // and the depth texture)
-    void loadData(GLuint, GLuint);
+    void loadData(GLuint, GLuint, GLuint);
     // This does the real work - i.e. runs the kernel and accumulates
     // scores for all renderings
     std::vector<double>& calculateScores(std::vector<Particle>&);
 
     // Updates the texture when OpenGL has updated it
-    void setTexture(GLuint);
+    void setObservations(GLuint, GLuint);
 
   private:
     void loadProgramFromString(const std::string&);
     double getCollisionPenalty(Particle&);
 
     // Buffers and GL objects for OpenCL
-    std::vector<cl::Memory> clObjects;  // 0: renderbuffer, 1: depth texture
+    std::vector<cl::Memory> clObjects;  // 0: renderbuffer, 1: skin texture, 2: depth texture
     cl::Buffer differenceBuffer; 
     cl::Buffer unionBuffer; 
     cl::Buffer intersectionBuffer;

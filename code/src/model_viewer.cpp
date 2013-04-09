@@ -234,7 +234,6 @@ class ModelViewer : public ICallbacks
         pipeline.setTiles(numTiles);
 
       }
-      printf("%f %f\n", handParams['p' - 97], handParams['l' - 97]);
     }
 
     virtual void PassiveMouseCB(int x, int y)

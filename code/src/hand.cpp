@@ -80,8 +80,8 @@ void Hand::initialiseHand(double params[NUM_PARAMETERS])
 
 glm::mat4 Hand::initialiseJoint(
     glm::mat4 start,
-    double xRot,
-    double zRot,
+    double* xRot,
+    double* zRot,
     double diameter,
     double length,
     double coneRatio)
@@ -95,12 +95,12 @@ glm::mat4 Hand::initialiseJoint(
   t = glm::translate(glm::mat4(1.0f), glm::vec3(0.0f, length/2, 0.0f));
 
   // Basic constraints
-  if (zRot < 0) zRot = 0;
-  else if (zRot > M_PI/2) zRot = M_PI/2;
-  if (xRot > M_PI/4) xRot = M_PI/4;
-  else if (xRot < -M_PI/4) xRot = -M_PI/4;
+  if (*zRot < 0) *zRot = 0;
+  else if (*zRot > M_PI/2) *zRot = M_PI/2;
+  if (*xRot > M_PI/8) *xRot = M_PI/8;
+  else if (*xRot < -M_PI/8) *xRot = -M_PI/8;
 
-  glm::quat o(glm::vec3(zRot, 0.0f, xRot));
+  glm::quat o(glm::vec3(*zRot, 0.0f, *xRot));
   glm::gtc::quaternion::normalize(o);
   r = glm::toMat4(o);
   c = cone(coneRatio);
@@ -134,10 +134,11 @@ void Hand::initialiseFinger(
   s = glm::scale(s, glm::vec3(diameter, diameter, diameter));
   sphereWVPs.push_back(start * s);
 
+  double temp = 0.0f;
   current = initialiseJoint(
       start, 
-      params[getParamPos(finger, ROT_1X)],
-      params[getParamPos(finger, ROT_1Z)],
+      &params[getParamPos(finger, ROT_1X)],
+      &params[getParamPos(finger, ROT_1Z)],
       diameter,
       length,
       coneRatio);
@@ -147,8 +148,8 @@ void Hand::initialiseFinger(
 
   current = initialiseJoint(
       current, 
-      0.0f,
-      params[getParamPos(finger, ROT_2Z)],
+      &temp,
+      &params[getParamPos(finger, ROT_2Z)],
       diameter,
       length,
       coneRatio);
@@ -158,8 +159,8 @@ void Hand::initialiseFinger(
 
   current = initialiseJoint(
       current, 
-      0.0f,
-      params[getParamPos(finger, ROT_3Z)],
+      &temp,
+      &params[getParamPos(finger, ROT_3Z)],
       diameter,
       length,
       coneRatio);
@@ -199,6 +200,16 @@ void Hand::initialiseThumb(
   t = glm::translate(glm::mat4(1.0f), glm::vec3(palmScale.x / 8, -0.5, palmScale.z / 4));
   // First translate sphere so it rotates about different axis.
   it = glm::translate(glm::mat4(1.0f), glm::vec3(0.0f, 0.3f, 0.0f));
+
+  double* xRot = &params[getParamPos(THUMB, ROT_1X)];
+  double* zRot = &params[getParamPos(THUMB, ROT_1Z)];
+
+  if (*xRot > M_PI/4) *xRot = M_PI/4;
+  else if (*xRot < -M_PI/4) *xRot = -M_PI/4;
+
+  if (*zRot > M_PI/2) *zRot = M_PI/2;
+  else if (*zRot < 0) *zRot = 0;
+
   glm::quat o(glm::vec3(
         params[getParamPos(THUMB, ROT_1X)] + M_PI/8,
         0.0f, 
@@ -220,10 +231,11 @@ void Hand::initialiseThumb(
   current = current * t * r;
   sphereWVPs.push_back(current * s);
 
+  double temp = 0.0f;
   current = initialiseJoint(
       current, 
-      0.0,
-      params[getParamPos(THUMB, ROT_2Z)],
+      &temp,
+      &params[getParamPos(THUMB, ROT_2Z)],
       diameter,
       length,
       coneRatio);
@@ -233,8 +245,8 @@ void Hand::initialiseThumb(
 
   current = initialiseJoint(
       current, 
-      0.0, 
-      params[getParamPos(THUMB, ROT_3Z)],
+      &temp, 
+      &params[getParamPos(THUMB, ROT_3Z)],
       diameter,
       length,
       coneRatio);

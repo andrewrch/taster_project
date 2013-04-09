@@ -36,10 +36,10 @@ Particle Particle::getPerturbation()
     pert.position[i] = position[i] + (rand()/(double(RAND_MAX)/2) - 1) * 10;
 
   for (int i = 3; i < 7; i++)
-    pert.position[i] = position[i] + (rand()/(double(RAND_MAX)/2) - 1) * M_PI/10;
+    pert.position[i] = position[i] + (rand()/(double(RAND_MAX)/2) - 1) * M_PI/4;
 
   for (unsigned int i = 7; i < numParameters; i++)
-    pert.position[i] = position[i] + (rand()/(double(RAND_MAX)/2) - 1) * M_PI/10;
+    pert.position[i] = position[i] + (rand()/(double(RAND_MAX)/2) - 1) * M_PI/5;
   return pert;
 }
 
@@ -65,11 +65,11 @@ void Particle::update(double score, Particle best)
   }
 
   double r1, r2, c1r1, c2r2;
+  r1 = rand() / double(RAND_MAX);
+  r2 = rand() / double(RAND_MAX);
+  c1r1 = c1 * r1;
+  c2r2 = c2 * r2;
 
-    r1 = rand() / double(RAND_MAX);
-    r2 = rand() / double(RAND_MAX);
-    c1r1 = c1 * r1;
-    c2r2 = c2 * r2;
   for (unsigned int i = 0; i < numParameters; i++)
   {
     velocity[i] = k * (velocity[i] + c1r1 * (bestPosition[i] - position[i]) + \

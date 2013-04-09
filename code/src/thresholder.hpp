@@ -8,10 +8,10 @@ class Thresholder
   public:
     Thresholder(float, float, float);
     ~Thresholder() {}
-    cv::Mat thresholdImage(cv::Mat&, cv::Mat&, cv::Mat&, cv::Mat&);
+    cv::Mat thresholdImage(cv::Mat&, cv::Mat&, cv::Mat&, cv::Mat&, cv::Mat&);
 
   private:
-    std::vector<cv::Point> findSeeds(cv::Mat&, cv::Mat&, cv::Mat&, cv::Mat&);
+    std::vector<cv::Point> findSeeds(cv::Mat&, cv::Mat&, cv::Mat&, cv::Mat&, cv::Mat&);
     cv::Mat findNeighbours(
         std::vector<cv::Point>&, 
         cv::Mat&, 
@@ -27,6 +27,11 @@ class Thresholder
         int, 
         unsigned int);
     float tMin, tMax, tDepth;
+
+    inline unsigned int uabs(unsigned int a, unsigned int b) 
+    {
+      if (a > b) return a - b; else return b - a;
+    };
 };
 
 #endif

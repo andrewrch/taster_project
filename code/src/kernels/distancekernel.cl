@@ -36,8 +36,6 @@ __kernel void calculateImageCharacteristics (
   int2 iCoordBase = (int2) (patchX * patchSizeX,  
                              patchY * patchSizeY);
   // Now iterate over each pixel in the patch
-//  printf("addresses %x %x \n", depthImage, tiledRender);
-//  bool cat = true;
   for (int x = 0; x < patchSizeX; x++)
     for (int y = 0; y < patchSizeY; y++)
     {
@@ -45,8 +43,13 @@ __kernel void calculateImageCharacteristics (
       int2 imageCoords = (int2) (width - (iCoordBase.x + x), height - (iCoordBase.y + y));
 
       uint4 depthVal = read_imageui(depthImage, sampler, imageCoords);
+      uint4 skinVal = read_imageui(skinImage, sampler, imageCoords);
       uint4 renderVal = convert_uint4(read_imagef(tiledRender, sampler, rendCoords));
 
+//      if (skinVal.x != 0 && skinVal.x != 255 )
+//      {
+//        printf("Skin image...: %d %d %d %d %d \n", skinVal.x, depthVal.x, renderVal.x, imageCoords.x, imageCoords.y);
+//      }
 //      if (depthVal.x > 0 && cat)
 //      {
 //        printf("coords: %d %d, depth: %u\n", imageCoords.x, imageCoords.y, depthVal.x);
@@ -54,10 +57,10 @@ __kernel void calculateImageCharacteristics (
 //      }
 
       int diff = abs_diff(depthVal.x, renderVal.x);
-
+      int rm = (diff < dm) || depthVal.x == 0 ? 1 : 0;
       diffSum += (diff < dM) ? diff : dM;
-      if (diff < dm || depthVal.x == 0) unSum++;
-      if (diff < dm && depthVal.x > 0) intSum++;
+      if (rm || skinVal.x > 0) unSum++;
+      if (rm && skinVal.x > 0) intSum++;
     }
 
     unsigned int localPos = patchY * (width/patchSizeX) + patchX;

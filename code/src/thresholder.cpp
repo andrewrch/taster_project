@@ -12,9 +12,9 @@ Thresholder::Thresholder(float min, float max, float depth) :
 {
 }
 
-cv::Mat Thresholder::thresholdImage(cv::Mat& i, cv::Mat& depth, cv::Mat& valid, cv::Mat& prev)
+cv::Mat Thresholder::thresholdImage(cv::Mat& i, cv::Mat& depth, cv::Mat& valid, cv::Mat& prevSkin, cv::Mat& prevDepth)
 {
-  vector<cv::Point> seeds = findSeeds(i, depth, valid, prev);
+  vector<cv::Point> seeds = findSeeds(i, depth, valid, prevSkin, prevDepth);
   return findNeighbours(seeds, i, depth, valid);
 }
 
@@ -22,7 +22,8 @@ vector<cv::Point> Thresholder::findSeeds(
     cv::Mat& image, 
     cv::Mat& depth,
     cv::Mat& valid, 
-    cv::Mat& prev)
+    cv::Mat& prevSkin,
+    cv::Mat& prevDepth)
 {
   vector<cv::Point> seeds;
   // Scan through whole image
@@ -30,9 +31,12 @@ vector<cv::Point> Thresholder::findSeeds(
     for (register int col = 0; col < image.cols; col++)
     {
       // Check whether seed with classifier
-      if (image.at<float>(row, col) > tMax ||
-          (valid.at<uchar>(row, col) &&  depth.at<uint16_t>(row, col) < 2000 &&
-          (abs(prev.at<uint16_t>(row, col) - depth.at<uint16_t>(row, col) < tDepth))))
+//      if (prevSkin.at<uint8_t>(row, col))
+//        cout << "d: " << depth.at<uint16_t>(row, col) << " p: " << prevDepth.at<uint16_t>(row, col) << endl;
+      if ( depth.at<uint16_t>(row, col) < 2000 )
+        if (image.at<float>(row, col) > tMax ||
+            (prevSkin.at<uint8_t>(row, col) && 
+            (uabs(prevDepth.at<uint16_t>(row, col), depth.at<uint16_t>(row, col)) < tDepth)))
         	// Add seed to vector
         	seeds.push_back(cv::Point(col, row));
     }
@@ -48,6 +52,7 @@ cv::Mat Thresholder::findNeighbours(
   // Keep a record of which pixels have already been looked at
   cv::Mat visited = cv::Mat::zeros(image.size(), CV_8UC1);
   cv::Mat skin = cv::Mat::zeros(image.size(), CV_8UC1);
+
   unsigned int depth;
   // For each seed, check it surrounding pixels
   for (vector<cv::Point>::iterator it = seeds.begin(); it < seeds.end(); ++it)
@@ -75,11 +80,14 @@ void Thresholder::checkNeighbours(cv::Mat& visited,
     visited.at<uchar>(row, col) = 1;
 
     // Check with classifier whether it is a neighbour
-    if (image.at<float>(row, col) > tMin || 
-       (valid.at<uchar>(row, col) && abs(depthImage.at<uint16_t>(row, col) - depth) < tDepth && depthImage.at<uint16_t>(row, col) < 2000 && image.at<float>(row, col) > tMin/4 ))
-    {
+//    cout << depthImage.at<uint16_t>(row, col) << endl;
+    if (depthImage.at<uint16_t>(row, col) < 2000)
+      if (image.at<float>(row, col) > tMin || 
+          (valid.at<uchar>(row, col) && uabs(depthImage.at<uint16_t>(row, col), depth) < tDepth && 
+           image.at<float>(row, col) > tMin/4 ))
+      {
       // Set as skin
-      skinImage.at<uint8_t>(row, col) = 255;
+      skinImage.at<uint8_t>(row, col) = 1;
       
       // Recursively check surrounding pixels
       if (row > 0 && !visited.at<uchar>(row - 1, col))
