@@ -239,7 +239,7 @@ std::vector<double>& Scorer::calculateScores(std::vector<Particle>& particles)
   {
     double a = (double) differenceSum[i] / (unionSum[i] + 0.000001f);
     double b = (1 - ((double) (2 * intersectionSum[i]) / (intersectionSum[i] + unionSum[i])));
-    finalScores[i] = (a + lambda * b) + lambdak * getCollisionPenalty(particles[i]);
+    finalScores[i] = (a + lambda * b)  + lambdak * getCollisionPenalty(particles[i]);
   }
 
 //  for (int i = 0; i < numScores; i++)

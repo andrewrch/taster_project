@@ -472,18 +472,18 @@ class HandRenderer
         for (unsigned int i = 0; i < swarmGenerations; i++)
         {
           // Disturb half of the particles
-          if (!(i % 3))
-          {
-            // For half of the particles
-            for (unsigned int j = 0; j < numTiles / 2; j++)
-            {
-              // Choose random particle
-              unsigned int particle = rand() % numTiles;
-              // Choose random joint (Add 7 so ignore global pos/orientation)
-              unsigned int joint = (rand() % (NUM_PARAMETERS - 7)) + 7;
-              swarm.getParticles()[particle].getArray()[joint] = (rand()/(double(RAND_MAX)/2) - 1) * M_PI/2;
-            }
-          }
+          //if (!(i % 3))
+          //{
+          //  // For half of the particles
+          //  for (unsigned int j = 0; j < numTiles / 2; j++)
+          //  {
+          //    // Choose random particle
+          //    unsigned int particle = rand() % numTiles;
+          //    // Choose random joint (Add 7 so ignore global pos/orientation)
+          //    unsigned int joint = (rand() % (NUM_PARAMETERS - 7)) + 7;
+          //    swarm.getParticles()[particle].getArray()[joint] = (rand()/(double(RAND_MAX)/2) - 1) * M_PI/2;
+          //  }
+          //}
           makeTiledRendering();
           // For some reason texture needs setting every
           // frame TODO Find out why!
