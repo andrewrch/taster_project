@@ -57,7 +57,7 @@ __kernel void calculateImageCharacteristics (
 //      }
 
       int diff = abs_diff(depthVal.x, renderVal.x);
-      int rm = (diff < dm) || depthVal.x == 0 ? 1 : 0;
+      int rm = (diff < dm) ? 1: 0; // || depthVal.x == 0 ? 1 : 0;
       diffSum += (diff < dM) ? diff : dM;
       if (rm || skinVal.x > 0) unSum++;
       if (rm && skinVal.x > 0) intSum++;

@@ -33,13 +33,13 @@ Particle Particle::getPerturbation()
 {
   Particle pert(position.size(), c1, c2);
   for (int i = 0; i < 3; i++)
-    pert.position[i] = position[i] + (rand()/(double(RAND_MAX)/2) - 1) * 10;
+    pert.position[i] = position[i] + (rand()/(double(RAND_MAX)/2) - 1) * 20;
 
   for (int i = 3; i < 7; i++)
     pert.position[i] = position[i] + (rand()/(double(RAND_MAX)/2) - 1) * M_PI/4;
 
   for (unsigned int i = 7; i < numParameters; i++)
-    pert.position[i] = position[i] + (rand()/(double(RAND_MAX)/2) - 1) * M_PI/5;
+    pert.position[i] = position[i] + (rand()/(double(RAND_MAX)/2) - 1) * M_PI/2;
   return pert;
 }
 

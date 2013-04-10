@@ -33,7 +33,7 @@ vector<cv::Point> Thresholder::findSeeds(
       // Check whether seed with classifier
 //      if (prevSkin.at<uint8_t>(row, col))
 //        cout << "d: " << depth.at<uint16_t>(row, col) << " p: " << prevDepth.at<uint16_t>(row, col) << endl;
-      if ( depth.at<uint16_t>(row, col) < 2000 )
+      if ( depth.at<uint16_t>(row, col) < 2000 && depth.at<uint16_t>(row, col) > 0)
         if (image.at<float>(row, col) > tMax ||
             (prevSkin.at<uint8_t>(row, col) && 
             (uabs(prevDepth.at<uint16_t>(row, col), depth.at<uint16_t>(row, col)) < tDepth)))
@@ -81,7 +81,7 @@ void Thresholder::checkNeighbours(cv::Mat& visited,
 
     // Check with classifier whether it is a neighbour
 //    cout << depthImage.at<uint16_t>(row, col) << endl;
-    if (depthImage.at<uint16_t>(row, col) < 2000)
+    if (depthImage.at<uint16_t>(row, col) < 2000 && depthImage.at<uint16_t>(row, col) > 0 )
       if (image.at<float>(row, col) > tMin || 
           (valid.at<uchar>(row, col) && uabs(depthImage.at<uint16_t>(row, col), depth) < tDepth && 
            image.at<float>(row, col) > tMin/4 ))

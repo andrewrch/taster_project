@@ -197,8 +197,8 @@ class HandRenderer
 //      capture.set(CV_CAP_PROP_OPENNI_REGISTRATION,0);
 
       // Structure element for morphology whatsit
-      se = cv::Mat::zeros(cv::Size(5, 5), CV_8UC1);
-      cv::circle(se, cv::Point(3, 3), 2, cv::Scalar(255), -1);
+      se = cv::Mat::zeros(cv::Size(3, 3), CV_8UC1);
+      cv::circle(se, cv::Point(2, 2), 2, cv::Scalar(255), -1);
       prevSkin = cv::Mat(cv::Size(imageWidth, imageHeight), CV_8UC1);
       prevDepth = cv::Mat(cv::Size(imageWidth, imageHeight), CV_16UC1);
 
