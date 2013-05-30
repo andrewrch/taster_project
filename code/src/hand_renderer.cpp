@@ -272,12 +272,12 @@ class HandRenderer
       capture.retrieve( bgrImage, CV_CAP_OPENNI_BGR_IMAGE );
 
       // Grab images for depth stuff
-      cv::Mat validPixels;//, dispMap;
+      cv::Mat validPixels, dispMap;
       capture.retrieve( depthMap, CV_CAP_OPENNI_DEPTH_MAP );
 	  	capture.retrieve( validPixels, CV_CAP_OPENNI_VALID_DEPTH_MASK );
 
 //      imshow("valid", validPixels);
-//		  capture.retrieve( dispMap, CV_CAP_OPENNI_DISPARITY_MAP );
+		  capture.retrieve( dispMap, CV_CAP_OPENNI_DISPARITY_MAP );
 
       //cv::Mat bgrBlurred = bgrImage.clone();
       //cv::medianBlur(yuvImage, yuvImage, 3);
@@ -288,16 +288,26 @@ class HandRenderer
       {
         cv::resize(bgrImage, bgrSmall, cv::Size(imageWidth, imageHeight));
         cv::resize(depthMap, depthMap, cv::Size(imageWidth, imageHeight));
+        cv::resize(dispMap, dispMap, cv::Size(imageWidth, imageHeight));
         cv::resize(validPixels, validPixels, cv::Size(imageWidth, imageHeight));
         cv::cvtColor(bgrSmall, yuvImage, CV_BGR2YCrCb);
       }
       else
         cv::cvtColor(bgrImage, yuvImage, CV_BGR2YCrCb);
 
+      imwrite( "rgbimage.png", bgrSmall );
+      imwrite( "depthimage.png", dispMap);
+
 //      cv::GaussianBlur(yuvImage, yuvImage, cv::Size(25, 25), 1.5);
       // Find skin coloured pixels in RGB image
       cv::Mat prob = classifier.classifyImage(yuvImage);
+      imshow("p", prob);
+      cv::Mat probImage;
+      prob.convertTo(probImage, CV_8U, 255, 0);
+      imwrite( "probimage.png", probImage);
+      imshow("prob", probImage);
       cv::Mat skin = thresholder.thresholdImage(prob, depthMap, validPixels, prevSkin, prevDepth); 
+
 
       // Close and dilate to file holes and enlarge mask slightly
 //      cv::morphologyEx(skin, skin, cv::MORPH_CLOSE, se);
@@ -336,6 +346,8 @@ class HandRenderer
           hierarchy, 
           0, 
           cv::Point() );
+
+      imwrite("skinimage.png", skinImage);
 
 //      for (int i = 0; i < depthMap.rows; i++)
 //        for (int j = 0; j < depthMap.cols; j++)
