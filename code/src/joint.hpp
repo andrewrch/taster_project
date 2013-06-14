@@ -11,22 +11,21 @@
 #ifndef JOINT_H
 #define JOINT_H
 
-#include <string>
-#include <unordered_map>
-
 class Joint {
 
 	public:
-		Joint(Joint* parent);
+
+		friend class Segment;
+
+		Joint(glm::mat4 rotation);
 		~Joint();
 
 		Joint* getParent() { return this.parent; }
 		Joint* getChild() { return this.child; }
 
 	private:
-		Joint* parent, child;
-		std::unordered_map<std::string, Chain> chain;
-
+		Joint* parent;
+		Joint* child;
 		glm::mat4 rotation;
 };
 
