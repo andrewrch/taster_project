@@ -1,0 +1,34 @@
+#!/bin/bash
+
+echo "Creating particles directory";
+mkdir -p ./results/particles
+for i in 9 16 25 36 49 64 81 100 121;
+do
+  echo $i;
+  path="./results/particles/30_generations_${i}_particles"
+  echo $path
+  mkdir -p $path;
+  for j in {1..20}
+  do
+    cmd="./hand_renderer ${i} 30 128 ~/data/oikonomidis_2010_synth/ 2>${path}/${j}.txt";
+    echo $cmd;
+    eval $cmd
+  done
+done
+
+echo "Creating generations directory";
+mkdir -p ./results/generations
+for i in 10 20 30 40 50 60 70 80 90 100;
+do
+  echo $i;
+  path="./results/generations/${i}_generations_64_particles"
+  echo $path
+  mkdir -p $path;
+  for j in {1..20}
+  do
+    cmd="./hand_renderer 64 ${i} 128 ~/data/oikonomidis_2010_synth/ 2>${path}/${j}.txt";
+    echo $cmd;
+    eval $cmd;
+  done
+done
+

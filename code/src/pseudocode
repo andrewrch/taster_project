@@ -1,0 +1,54 @@
+Somethign like this.
+
+HandSkeleton hand(shape, pose);
+
+HandSkeleton(vector shape, vector pose)
+{
+  // Initialise empty chain which acts as root
+  Tree root("root");
+
+  // Add chain always adds a chain to the leaf node
+  root.addChain("thumb")
+  root.addChain("index")
+  root.addChain("middle")
+  root.addChain("ring")
+  root.addChain("little")
+
+  // So getChain always checks the leaf node
+  root.getChain("thumb").addSegment;
+  // In this case the leaf node is empty.
+}
+
+class Segment
+{
+  public:
+    Segment(Segment parent, glm::mat4 rot, glm::mat4 trans);
+    ~Segment();
+
+  private:
+    Segment parent;
+    Segment next; // = NULL
+    glm::mat4 joint;
+    glm::mat4 link;
+};
+
+class Chain
+{
+  public:
+    Chain(string);
+
+    // Adds a chain to the end of this chain
+    addChain(string)
+
+    // Gets a chain from the end of this chain
+    getChain(string)
+
+    // Adds a segment (Joint, link combo) to the end of the chain
+    addSegment(glm::mat4 rot, glm::mat4 trans)
+
+  private:
+    Joint root;
+    Joint leaf;
+
+
+};
